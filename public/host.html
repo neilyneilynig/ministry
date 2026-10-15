@@ -1,0 +1,562 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>The Ministry</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Alfa+Slab+One&family=Fredoka:wght@400;500;600;700&family=Special+Elite&display=swap" rel="stylesheet">
+<style>
+:root{
+  --wall:#2f4a3a;--wall2:#253b2e;--paper:#f6ecd2;--paper2:#eadcb5;--ink:#2b2118;--red:#c8323c;--green:#2e8b57;
+  --gold:#f3a712;--teal:#29a19c;--sky1:#9fd3e6;--sky2:#f7d9a8;--glass:rgba(255,255,255,.08)
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{font-family:Fredoka,system-ui,sans-serif;color:var(--paper);background:var(--wall);overflow:hidden;user-select:none;
+  background-image:repeating-linear-gradient(90deg,transparent 0 6vw,rgba(0,0,0,.06) 6vw 6.1vw),linear-gradient(var(--wall),var(--wall2))}
+.slab{font-family:'Alfa Slab One',serif;letter-spacing:.02em}
+.type{font-family:'Special Elite',monospace}
+#app{height:100%;display:grid;grid-template-rows:auto 1fr auto}
+header{display:flex;align-items:center;gap:1.4vw;padding:1.2vh 2vw;background:rgba(0,0,0,.25);border-bottom:.3vw solid rgba(0,0,0,.25)}
+.logo{font-size:1.6vw;flex:1;white-space:nowrap}
+.logo b{color:var(--gold)}
+.dayb{white-space:nowrap;font-size:1.3vw;background:var(--paper);color:var(--ink);padding:.3vw 1vw;border-radius:.5vw}
+#clock{font-size:2.4vw;min-width:7vw;text-align:center;background:var(--ink);color:var(--gold);border-radius:.6vw;padding:.1vw .8vw;font-family:'Special Elite',monospace}
+#clock.low{color:#fff;background:var(--red);animation:pulse .5s infinite alternate}
+@keyframes pulse{to{transform:scale(1.08)}}
+.moodbox{display:flex;align-items:center;gap:.6vw;font-size:1.1vw;white-space:nowrap}
+.moodbar{width:11vw;height:1.4vw;background:rgba(0,0,0,.35);border-radius:1vw;overflow:hidden}
+.moodbar i{display:block;height:100%;border-radius:1vw;transition:width .5s,background .5s}
+.moodface{font-size:2.2vw}
+main{display:grid;grid-template-columns:1fr 30vw;gap:1.5vw;padding:1.5vh 2vw;min-height:0}
+.office{display:grid;gap:1.2vw;align-content:center;grid-template-columns:repeat(var(--cols,2),1fr)}
+.desk{background:linear-gradient(#8b5e3c,#6f4a2f);border-radius:1vw;padding:1vw;box-shadow:0 .5vw 0 #4a3020, inset 0 .2vw 0 rgba(255,255,255,.15);position:relative;display:flex;flex-direction:column;gap:.8vw;transition:transform .2s}
+.desk.flash{animation:deskflash .6s}
+@keyframes deskflash{30%{transform:scale(1.04);box-shadow:0 .5vw 0 #4a3020,0 0 0 .4vw var(--gold)}}
+.desk .top{display:flex;align-items:center;gap:.8vw}
+.desk .av{font-size:2.8vw;line-height:1;background:var(--paper);border-radius:50%;width:4.2vw;height:4.2vw;display:grid;place-items:center;border:.3vw solid var(--c);flex:none;position:relative}
+.desk .av i{position:absolute;font-style:normal;line-height:1;pointer-events:none;filter:drop-shadow(0 .1vw .1vw rgba(0,0,0,.3))}
+.streak{font-family:'Alfa Slab One';font-size:1.1vw;background:linear-gradient(#ffb03a,#e4572e);color:#fff;border-radius:2vw;padding:.1vw .6vw;margin-left:.5vw;animation:flame .6s ease-in-out infinite alternate;display:inline-block}
+@keyframes flame{to{transform:scale(1.12) rotate(-3deg)}}
+.tok.vip span{background:#ffe08a}
+.tok.vip::after{content:'⭐';position:absolute;top:-.6vw;right:-.5vw;font-size:1.2vw}
+.react{position:fixed;z-index:16;pointer-events:none;background:var(--paper);color:var(--ink);font-weight:700;font-size:1.4vw;padding:.4vw 1vw;border-radius:1.2vw;box-shadow:0 .4vw 1vw rgba(0,0,0,.35);white-space:nowrap;animation:reactup 1.8s ease-out forwards;border:.2vw solid var(--k,#2e8b57)}
+.react::after{content:'';position:absolute;bottom:-.7vw;left:1.5vw;border:.4vw solid transparent;border-top-color:var(--paper)}
+.react.bad{--k:#c8323c}
+@keyframes reactup{0%{opacity:0;transform:translateY(1vh) scale(.6)}15%{opacity:1;transform:translateY(0) scale(1.05)}80%{opacity:1}100%{opacity:0;transform:translateY(-4vh)}}
+#evpill{display:none;white-space:nowrap;font-family:'Alfa Slab One';font-size:1.1vw;background:#6a4c93;color:#fff;border-radius:2vw;padding:.3vw 1vw;animation:pulse .6s infinite alternate}
+#quiet{position:fixed;left:35%;bottom:21vh;transform:translateX(-50%) rotate(-3deg);font-family:'Alfa Slab One';font-size:2.6vw;white-space:nowrap;animation:pulse .7s infinite alternate;color:#fff;background:rgba(106,76,147,.92);border:.4vw solid #fff;border-radius:1.5vw;padding:.5vw 2.5vw;z-index:9;display:none;box-shadow:0 1vw 3vw rgba(0,0,0,.4)}
+#banner.event{background:#6a4c93}
+#mega{position:fixed;right:2vw;top:12vh;width:29vw;z-index:12;display:flex;flex-direction:column;gap:1vh;pointer-events:none}
+.megacard{background:var(--gold);color:var(--ink);border-radius:1vw;padding:1vw 1.2vw;box-shadow:0 .6vw 1.5vw rgba(0,0,0,.4);border:.3vw solid #fff;animation:megain .4s cubic-bezier(.3,1.6,.5,1)}
+.megacard .who{font-family:'Alfa Slab One';font-size:1.3vw}
+.megacard .txt{font-family:'Special Elite';font-size:1.45vw;line-height:1.25;margin-top:.4vw;font-weight:700}
+.megacard.out{animation:megaout .4s forwards}
+@keyframes megain{from{transform:translateX(30vw) rotate(6deg)}}
+@keyframes megaout{to{transform:translateX(35vw);opacity:0}}
+#music{font-size:1vw}
+.awards{display:flex;flex-wrap:wrap;gap:.8vw;justify-content:center;margin-top:1.2vw}
+.award{background:var(--ink);color:var(--paper);border-radius:.8vw;padding:.5vw 1vw;font-size:1.15vw;animation:pop .5s cubic-bezier(.3,1.6,.5,1) both}
+.award b{color:var(--gold)}
+.desk .nm{font-size:1.7vw;font-weight:700;line-height:1.1}
+.desk .meta{display:flex;align-items:center;gap:.6vw;margin-top:.2vw}
+.desk .tr{font-size:1.5vw;line-height:1}
+.desk .rb{font-size:1vw;background:rgba(0,0,0,.25);border-radius:2vw;padding:.15vw .7vw}
+.desk .cnt{margin-left:auto;font-family:'Alfa Slab One';font-size:1.6vw;opacity:.9}
+.desk.off{filter:grayscale(1) brightness(.6)}
+.desk .rdy{position:absolute;top:-.8vw;right:-.8vw;background:var(--green);color:#fff;border-radius:50%;width:2.6vw;height:2.6vw;display:grid;place-items:center;font-size:1.4vw;border:.25vw solid var(--paper)}
+.stack{display:flex;flex-wrap:wrap;gap:.5vw;min-height:4.6vw;align-items:center;background:rgba(0,0,0,.2);border-radius:.7vw;padding:.4vw .6vw;box-shadow:inset 0 .2vw .4vw rgba(0,0,0,.25)}
+.tok{width:3.6vw;height:3.6vw;border-radius:50%;display:grid;place-items:center;position:relative;background:conic-gradient(var(--pc,#2e8b57) calc(var(--p,1)*360deg),rgba(0,0,0,.3) 0)}
+.tok span{width:2.9vw;height:2.9vw;border-radius:50%;background:var(--paper);display:grid;place-items:center;font-size:1.8vw}
+.tok.new{animation:drop .4s cubic-bezier(.3,1.6,.5,1)}
+@keyframes drop{from{transform:translateY(-3vw) scale(.4);opacity:0}}
+.empty{font-size:1.1vw;opacity:.55;font-style:italic;padding-left:.4vw}
+.side{display:flex;flex-direction:column;gap:1vh;min-height:0}
+.feedh{font-size:1.3vw;color:var(--gold)}
+.feed{display:flex;flex-direction:column;gap:.8vh;overflow:hidden}
+.feed .item:nth-child(4){opacity:.75}.feed .item:nth-child(5){opacity:.5}.feed .item:nth-child(n+6){display:none}
+.item{background:var(--paper);color:var(--ink);border-radius:.6vw;padding:.7vw 1vw;font-size:1.15vw;font-family:'Special Elite',monospace;border-left:.6vw solid var(--k,#999);line-height:1.25}
+.item.new{animation:slidein .4s ease-out}
+@keyframes slidein{from{transform:translateX(5vw);opacity:0}}
+.item.disaster{--k:var(--red);background:#ffe1dc;font-weight:700}
+.item.good{--k:var(--green)}.item.ok{--k:var(--teal)}.item.protest{--k:#e07a1f}.item.left{--k:#7a6a58}.item.scandal{--k:#6a4c93}.item.memo{--k:var(--gold)}
+.city{position:relative;height:19vh;background:linear-gradient(var(--sky1),var(--sky2));overflow:hidden;border-top:.4vw solid rgba(0,0,0,.3);transition:background 2s}
+.city .ground{position:absolute;left:0;right:0;bottom:0;height:3.4vh;background:#4f5d46;border-top:.25vw solid #3f4a38}
+.city .ground::after{content:'';position:absolute;left:0;right:0;top:45%;height:.25vw;background:repeating-linear-gradient(90deg,#e9d98f 0 2vw,transparent 2vw 4vw);opacity:.7}
+.hills{position:absolute;left:0;right:0;bottom:3vh;width:100%;height:9vh}
+.sun{position:absolute;font-size:3.4vw;line-height:1;transition:left 1s linear,top 1s linear;filter:drop-shadow(0 0 1.2vw rgba(255,220,120,.9))}
+.cloud{position:absolute;font-size:3.6vw;opacity:.9;animation:drift linear infinite}
+.cloud.c1{top:6%;animation-duration:70s;animation-delay:-10s}.cloud.c2{top:18%;font-size:2.6vw;animation-duration:95s;animation-delay:-50s}.cloud.c3{top:2%;font-size:2.2vw;animation-duration:120s;animation-delay:-85s}
+@keyframes drift{from{left:-6vw}to{left:102vw}}
+.walkers{position:absolute;left:0;right:0;bottom:.2vh;height:3vh;pointer-events:none}
+.walker{position:absolute;bottom:0;font-size:1.7vw;animation:walk linear infinite}
+.walker.rev{animation-name:walkrev}
+.walker span{display:inline-block;animation:bob .35s ease-in-out infinite alternate}
+@keyframes walk{from{left:-3vw}to{left:101vw}}
+@keyframes walkrev{from{left:101vw;transform:scaleX(-1)}to{left:-3vw;transform:scaleX(-1)}}
+@keyframes bob{to{transform:translateY(-.3vw)}}
+.lot.fire::before{content:'💨';position:absolute;left:30%;top:-10%;font-size:2.4vw;opacity:0;animation:smoke 1.8s ease-out infinite}
+@keyframes smoke{0%{opacity:.8;transform:translateY(0) scale(.6)}100%{opacity:0;transform:translateY(-5vh) scale(1.4)}}
+.lot.fresh::before{content:'✨';position:absolute;left:50%;top:-30%;transform:translateX(-50%);font-size:2.4vw;animation:sparkle 1.2s ease-out forwards}
+@keyframes sparkle{from{opacity:1;transform:translateX(-50%) scale(.4)}to{opacity:0;transform:translateX(-50%) translateY(-3vh) scale(1.6)}}
+.lots{position:absolute;left:13vw;right:1.5vw;bottom:2.2vh;display:grid;grid-template-columns:repeat(18,1fr);justify-items:center;align-items:end}
+.lot{font-size:3.6vw;line-height:1;position:relative;transition:transform .3s}
+.lot.fresh{animation:pop .6s cubic-bezier(.3,1.6,.5,1)}
+@keyframes pop{from{transform:scale(0)}}
+.lot.fire::after{content:'🔥';position:absolute;left:50%;bottom:30%;transform:translateX(-50%);font-size:3.4vw;animation:flick .25s infinite alternate}
+.lot.fire{filter:sepia(.6) saturate(2) hue-rotate(-20deg)}
+@keyframes flick{to{transform:translateX(-50%) scale(1.15) rotate(6deg)}}
+.hq{position:absolute;left:1.5vw;bottom:2vh;font-size:5.4vw;line-height:1;text-align:center}
+.hq small{display:block;font-size:.8vw;background:var(--ink);color:var(--paper);padding:.1vw .4vw;border-radius:.3vw;white-space:nowrap;font-family:'Special Elite';margin-bottom:.3vw}
+.protest{position:absolute;left:8vw;bottom:.6vh;font-size:1.6vw;display:flex;flex-wrap:wrap;width:5vw;gap:0;line-height:1}
+.protest span{animation:hop .5s infinite alternate}
+.protest span:nth-child(2n){animation-delay:.25s}
+@keyframes hop{to{transform:translateY(-.4vw)}}
+body.shake #app{animation:shake .5s}
+@keyframes shake{20%{transform:translate(-1vw,.5vw)}40%{transform:translate(1vw,-.5vw)}60%{transform:translate(-.6vw,.3vw)}80%{transform:translate(.6vw,0)}}
+#banner{position:fixed;left:50%;top:40%;transform:translate(-50%,-50%) rotate(-3deg);background:var(--red);color:#fff;font-family:'Alfa Slab One';font-size:3vw;padding:1.5vw 3vw;border-radius:1vw;box-shadow:0 1vw 3vw rgba(0,0,0,.5);text-align:center;max-width:80vw;z-index:20;display:none;border:.4vw solid #fff}
+#banner.show{display:block;animation:bannerin .35s cubic-bezier(.3,1.6,.5,1)}
+#banner.memo{background:var(--gold);color:var(--ink)}
+@keyframes bannerin{from{transform:translate(-50%,-50%) rotate(-3deg) scale(.3)}}
+.flyer{position:fixed;font-size:3vw;z-index:15;pointer-events:none;transition:all .7s cubic-bezier(.5,0,.3,1)}
+
+/* overlays */
+#ov{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(20,30,24,.82);z-index:10;backdrop-filter:blur(.3vw)}
+#ov.show{display:flex}
+#ov.solid{background:var(--wall);background-image:repeating-linear-gradient(90deg,transparent 0 6vw,rgba(0,0,0,.06) 6vw 6.1vw),linear-gradient(var(--wall),var(--wall2));backdrop-filter:none}
+.panel{background:var(--paper);color:var(--ink);border-radius:1.2vw;padding:2.5vw 3vw;box-shadow:0 .6vw 0 rgba(0,0,0,.3),0 2vw 4vw rgba(0,0,0,.35);max-width:80vw;max-height:92vh;overflow:hidden;animation:pin .4s cubic-bezier(.3,1.4,.5,1)}
+@keyframes pin{from{transform:translateY(5vh) rotate(2deg);opacity:0}}
+.panel h1{font-family:'Alfa Slab One';font-size:4.4vw;line-height:1}
+.panel h2{font-family:'Alfa Slab One';font-size:2.2vw;margin:.5vw 0 1vw}
+.panel p,.panel li{font-size:1.5vw;line-height:1.35}
+.panel ul{padding-left:1.8vw;margin:1vw 0}
+.readyrow{display:flex;gap:1vw;margin-top:1.5vw;flex-wrap:wrap}
+.rchip{display:flex;align-items:center;gap:.4vw;background:transparent;border:.15vw dashed rgba(43,33,24,.35);border-radius:2vw;padding:.2vw 1vw .2vw .4vw;font-size:1.3vw;color:rgba(43,33,24,.6)}
+.rchip.on{background:var(--green);border:.15vw solid var(--green);color:#fff}
+.rchip .st{font-size:1vw;font-weight:600;margin-left:.2vw}
+.rchip .a{font-size:2vw}
+button{font-family:inherit;cursor:pointer;border:none}
+.btn{background:var(--red);color:#fff;font-family:'Alfa Slab One';font-size:1.8vw;border-radius:1vw;padding:1vw 2.5vw;box-shadow:0 .4vw 0 #8a1f27}
+.btn:active{transform:translateY(.3vw);box-shadow:0 .1vw 0 #8a1f27}
+.btn:disabled{opacity:.4}
+#ctrl{position:fixed;right:1vw;bottom:18.5vh;display:flex;gap:.5vw;opacity:.3;z-index:30}
+#ctrl:hover{opacity:1}
+#ctrl button{background:rgba(0,0,0,.5);color:#fff;border-radius:.6vw;padding:.4vw .8vw;font-size:1vw}
+
+/* lobby */
+.lobby{display:flex;gap:4vw;align-items:center}
+.qrwrap{background:var(--paper);padding:1.2vw;border-radius:1vw;transform:rotate(-2deg);box-shadow:0 1vw 0 rgba(0,0,0,.3);text-align:center;color:var(--ink)}
+.qrwrap img{width:22vw;height:22vw;display:block}
+.qrwrap .s{font-family:'Alfa Slab One';font-size:1.8vw;margin-top:.4vw}
+.qrwrap .u{font-family:'Special Elite';font-size:1.1vw;opacity:.7}
+.ltitle{font-family:'Alfa Slab One';font-size:5.5vw;line-height:.95;color:var(--paper);text-shadow:0 .5vw 0 rgba(0,0,0,.3)}
+.ltitle b{color:var(--gold)}
+.lsub{font-size:1.6vw;opacity:.85;margin:1vw 0 2vw;font-family:'Special Elite'}
+.roster{display:flex;flex-wrap:wrap;gap:1vw;min-height:8vw;margin-bottom:2vw;max-width:50vw}
+.rp{background:var(--paper);color:var(--ink);border-radius:1vw;padding:.6vw 1vw;text-align:center;min-width:7vw;position:relative;animation:pop .4s cubic-bezier(.3,1.6,.5,1)}
+.rp .a{font-size:3.4vw;display:block}
+.rp .n{font-weight:700;font-size:1.3vw}
+.rp .x{position:absolute;top:.2vw;right:.4vw;background:none;opacity:0;font-size:1vw}
+.rp:hover .x{opacity:.6}
+
+/* newspaper */
+.paperov{width:70vw;font-family:'Special Elite',monospace;background:#f3ead3 repeating-linear-gradient(0deg,transparent 0 2.2vw,rgba(0,0,0,.03) 2.2vw 2.3vw)}
+.mast{text-align:center;border-bottom:.3vw double var(--ink);padding-bottom:.6vw;margin-bottom:1vw}
+.mast .t{font-family:'Alfa Slab One';font-size:4vw;letter-spacing:.05em}
+.mast .d{font-size:1.1vw;display:flex;justify-content:space-between;border-top:.15vw solid var(--ink);margin-top:.4vw;padding-top:.3vw}
+.lead{font-family:'Alfa Slab One';font-size:2.6vw;line-height:1.05;margin-bottom:1vw}
+.heads{display:grid;grid-template-columns:1fr 1fr;gap:.8vw 2vw;font-size:1.25vw}
+.heads div{border-top:.12vw solid rgba(0,0,0,.3);padding-top:.4vw}
+.stats{display:flex;gap:2vw;margin-top:1.2vw;font-size:1.4vw;justify-content:center;background:var(--ink);color:var(--paper);padding:.6vw;border-radius:.4vw}
+.closed{font-family:'Alfa Slab One';color:var(--red);font-size:3vw;text-align:center;transform:rotate(-4deg);border:.4vw solid var(--red);padding:.5vw;margin:1vw auto;width:fit-content}
+
+/* final */
+.res{width:100%;border-collapse:collapse;font-size:1.4vw;margin-top:1vw}
+.res td,.res th{padding:.6vw .8vw;text-align:left;border-bottom:.12vw solid rgba(0,0,0,.15)}
+.res th{font-size:1vw;text-transform:uppercase;opacity:.6}
+.res tr.win{background:#fff3c4}
+.res .m{font-family:'Alfa Slab One';font-size:1.8vw}
+.res .w{font-family:'Special Elite';font-size:1vw;max-width:20vw}
+.caught{background:var(--red);color:#fff;border-radius:.4vw;padding:0 .4vw;font-size:1vw}
+#confetti{position:fixed;inset:0;pointer-events:none;z-index:40}
+body.mirror #ctrl,body.mirror #start,body.mirror #again,body.mirror .rp .x,body.mirror .mirrorurl{display:none!important}
+.mirrorurl{font-family:'Special Elite';font-size:1vw;opacity:.75;margin-top:1vw}
+#soundhint{position:fixed;bottom:1vh;left:50%;transform:translateX(-50%);background:rgba(0,0,0,.5);border-radius:1vw;padding:.3vw 1vw;font-size:1vw;z-index:50}
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <div class="logo slab">🏛️ THE <b>MINISTRY</b> OF PERMITS</div>
+    <div class="dayb slab" id="dayb"></div>
+    <div id="evpill"></div>
+    <div class="moodbox"><span>CITY MOOD</span><div class="moodbar"><i id="moodfill"></i></div><span class="moodface" id="moodface">🙂</span></div>
+    <div id="clock">--</div>
+  </header>
+  <main>
+    <section class="office" id="office"></section>
+    <aside class="side"><div class="feedh slab">📰 LIVE FROM THE CITY</div><div class="feed" id="feed"></div></aside>
+  </main>
+  <section class="city" id="city">
+    <div class="sun" id="sun">☀️</div>
+    <div class="cloud c1">☁️</div><div class="cloud c2">☁️</div><div class="cloud c3">☁️</div>
+    <svg class="hills" viewBox="0 0 100 20" preserveAspectRatio="none"><path d="M0 20V11Q8 3 18 9T38 8T60 10T80 6T100 9V20Z" fill="#8fb27a" opacity=".7"/><path d="M0 20V15Q12 9 26 14T52 12T78 15T100 12V20Z" fill="#6f9460"/></svg>
+    <div class="ground"></div>
+    <div class="walkers" id="walkers"></div>
+    <div class="hq"><small>THE MINISTRY</small>🏛️</div>
+    <div class="protest" id="protest"></div>
+    <div class="lots" id="lots"></div>
+  </section>
+</div>
+<div id="ov"></div>
+<div id="banner"></div>
+<div id="quiet">🤫 SHHH! NO TALKING!</div>
+<div id="mega"></div>
+<div id="ctrl"><button id="music">🎵 Music: on</button><button id="skip">⏭ Skip</button><button id="home">🏠 Lobby</button></div>
+<div id="soundhint">🔊 Click anywhere to enable sound</div>
+<canvas id="confetti"></canvas>
+<script>
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const WEEKDAYS = ['', 'MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY'];
+let ws, S = null, TRAITS = {}, deadline = null, recvAt = 0, prevPhase = null, lastTick = -1;
+const seenNews = new Set(), seenForms = new Set();
+const trait = t => TRAITS[t]?.e || '';
+const money = n => (n < 0 ? '−$' : '$') + Math.abs(n);
+const pick = a => a[Math.floor(Math.random() * a.length)];
+const WEAR = {
+  hat: ['🎩', 'top:-1.9vw;left:50%;transform:translateX(-50%) rotate(-8deg);font-size:2.3vw'],
+  glasses: ['👓', 'top:32%;left:50%;transform:translateX(-50%);font-size:2vw'],
+  bowtie: ['🎀', 'bottom:-1vw;left:50%;transform:translateX(-50%);font-size:1.7vw'],
+  mustache: ['🥸', 'bottom:-.5vw;right:-.9vw;font-size:1.6vw'],
+};
+const dressed = (avatar, traits) => avatar + traits.map(t => WEAR[t] ? `<i style="${WEAR[t][1]}">${WEAR[t][0]}</i>` : '').join('');
+const SKIES = { 0: ['#9fd3e6', '#f7d9a8'], 1: ['#bfe6f5', '#fff1c9'], 2: ['#9fd3e6', '#f7e0a8'], 3: ['#7fc3e6', '#f9d38a'], 4: ['#f6c177', '#f08a5d'], 5: ['#7b5ea7', '#f4845f'] };
+const REACT = {
+  okapprove: ['YAY! 🥳', 'Thank you!! 😍', 'Finally!', 'Woohoo!', 'Best. Clerk. Ever.', '🎉🎉🎉'],
+  okdeny: ['Hmph! 😤', "I'll be back!", 'Fine… 😭', 'Worth a shot 🤷', 'Curses!'],
+  badapprove: ['Hehe, sucker 😈', 'Muahaha!', 'Too easy 😏', 'They fell for it!'],
+  baddeny: ['OUTRAGEOUS! 😡', "I'm calling my lawyer!", 'This is a CRIME!', 'I did EVERYTHING right!'],
+};
+let walkerCount = -1;
+
+// ---------- sound ----------
+let ac = null;
+document.addEventListener('pointerdown', () => { if (!ac) { try { ac = new AudioContext(); } catch {} } ac?.resume(); $('#soundhint').style.display = 'none'; });
+function tone(f, dur = .15, type = 'triangle', vol = .15, when = 0, slide) {
+  if (!ac) return;
+  const o = ac.createOscillator(), g = ac.createGain(), t = ac.currentTime + when;
+  o.type = type; o.frequency.setValueAtTime(f, t); if (slide) o.frequency.exponentialRampToValueAtTime(slide, t + dur);
+  g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(.001, t + dur);
+  o.connect(g).connect(ac.destination); o.start(t); o.stop(t + dur);
+}
+function noise(dur = .6, vol = .3, lp = 800) {
+  if (!ac) return;
+  const b = ac.createBuffer(1, ac.sampleRate * dur, ac.sampleRate), d = b.getChannelData(0);
+  for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / d.length, 2);
+  const s = ac.createBufferSource(), f = ac.createBiquadFilter(), g = ac.createGain();
+  s.buffer = b; f.type = 'lowpass'; f.frequency.value = lp; g.gain.value = vol;
+  s.connect(f).connect(g).connect(ac.destination); s.start();
+}
+const SFX = {
+  join: () => [523, 659, 784].forEach((f, i) => tone(f, .15, 'triangle', .15, i * .07)),
+  arrive: () => tone(880, .08, 'sine', .08),
+  good: () => [660, 990].forEach((f, i) => tone(f, .18, 'sine', .12, i * .08)),
+  ok: () => tone(520, .1, 'square', .05),
+  disaster: () => { noise(1.2, .5, 600); tone(200, .8, 'sawtooth', .12, 0, 50); },
+  protest: () => [220, 196, 175].forEach((f, i) => tone(f, .25, 'sawtooth', .07, i * .12)),
+  left: () => { noise(.25, .4, 300); },
+  scandal: () => [400, 300].forEach((f, i) => tone(f, .2, 'square', .08, i * .15)),
+  memo: () => [880, 660, 880, 660].forEach((f, i) => tone(f, .12, 'square', .08, i * .13)),
+  pass: () => tone(300, .25, 'sine', .08, 0, 900),
+  bell: () => [1047, 1319, 1568].forEach((f, i) => tone(f, .6, 'sine', .12, i * .15)),
+  whistle: () => tone(1800, .7, 'sine', .15, 0, 1400),
+  tick: () => tone(1100, .04, 'square', .05),
+  mega: () => { tone(220, .5, 'sawtooth', .12, 0, 330); tone(330, .4, 'sawtooth', .1, .15, 440); },
+  prank: () => [900, 1200, 800, 1300, 700].forEach((f, i) => tone(f, .06, 'square', .06, i * .05)),
+  event: () => [523, 784, 659, 1047].forEach((f, i) => tone(f, .18, 'square', .09, i * .1)),
+  fanfare: () => [[523, 0], [659, .15], [784, .3], [1047, .45], [784, .7], [1047, .85]].forEach(([f, w]) => tone(f, .35, 'square', .08, w)),
+};
+
+// ---------- elevator music ----------
+let musicOn = true, musicTimer = null, bar = 0;
+const CHORDS = [[261.6, 329.6, 392, 493.9], [220, 261.6, 329.6, 392], [293.7, 349.2, 440, 523.3], [196, 246.9, 293.7, 349.2]];
+const MELODY = [659.3, 587.3, 523.3, 587.3, 659.3, 783.99, 659.3, 0, 587.3, 523.3, 440, 523.3, 587.3, 0, 493.9, 0];
+function musicTick() {
+  if (!ac || !musicOn || !S || ['lobby', 'final'].includes(S.phase)) return;
+  const tempo = 1 + ((S.day || 1) - 1) * 0.12 + (S.phase === 'day' && deadline && deadline - Date.now() < 20000 ? 0.15 : 0);
+  const beat = 0.5 / tempo, ch = CHORDS[bar % 4];
+  ch.forEach(f => tone(f / 2, beat * 3.6, 'sine', .018));
+  [0, 1.5, 2, 3.5].forEach(b => tone(ch[0] / 4, beat * .8, 'triangle', .05, b * beat));
+  [0, 1, 2, 3].forEach(i => { const f = MELODY[(bar % 4) * 4 + i]; if (f) tone(f, beat * .9, 'sine', .028, i * beat); });
+  bar++;
+  musicTimer = setTimeout(musicTick, beat * 4000);
+}
+function startMusic() { clearTimeout(musicTimer); if (musicOn) musicTick(); }
+$('#music').onclick = () => { musicOn = !musicOn; $('#music').textContent = `🎵 Music: ${musicOn ? 'on' : 'off'}`; if (musicOn) startMusic(); else clearTimeout(musicTimer); };
+
+// ---------- confetti ----------
+const cv = $('#confetti'), cx = cv.getContext('2d'); let bits = [];
+function confetti(n = 200) {
+  cv.width = innerWidth; cv.height = innerHeight;
+  const cols = ['#c8323c', '#f3a712', '#2e8b57', '#29a19c', '#f6ecd2', '#6a4c93'];
+  const start = !bits.length;
+  for (let i = 0; i < n; i++) bits.push({ x: Math.random() * cv.width, y: -20 - Math.random() * cv.height * .5, vx: (Math.random() - .5) * 4, vy: 2 + Math.random() * 4, r: Math.random() * 6, vr: (Math.random() - .5) * .3, s: 7 + Math.random() * 8, c: cols[i % cols.length] });
+  if (start) requestAnimationFrame(stepC);
+}
+function stepC() {
+  cx.clearRect(0, 0, cv.width, cv.height);
+  bits = bits.filter(b => b.y < cv.height + 20);
+  for (const b of bits) { b.x += b.vx; b.y += b.vy; b.vy += .04; b.r += b.vr; cx.save(); cx.translate(b.x, b.y); cx.rotate(b.r); cx.fillStyle = b.c; cx.fillRect(-b.s / 2, -b.s / 4, b.s, b.s / 2); cx.restore(); }
+  if (bits.length) requestAnimationFrame(stepC);
+}
+
+// ---------- fx ----------
+let bannerT;
+function banner(html, cls = '', ms = 3000) {
+  const b = $('#banner'); b.className = ''; void b.offsetWidth;
+  b.innerHTML = html; b.className = 'show ' + cls;
+  clearTimeout(bannerT); bannerT = setTimeout(() => { b.className = ''; }, ms);
+}
+function shake() { document.body.classList.remove('shake'); void document.body.offsetWidth; document.body.classList.add('shake'); }
+function flyPaper(from, to) {
+  const a = document.querySelector(`.desk[data-id="${from}"]`), b = document.querySelector(`.desk[data-id="${to}"]`);
+  if (!a || !b) return;
+  const ra = a.getBoundingClientRect(), rb = b.getBoundingClientRect();
+  const el = document.createElement('div'); el.className = 'flyer'; el.textContent = '📄';
+  el.style.left = (ra.left + ra.width / 2) + 'px'; el.style.top = (ra.top + ra.height / 2) + 'px';
+  document.body.appendChild(el);
+  requestAnimationFrame(() => requestAnimationFrame(() => { el.style.left = (rb.left + rb.width / 2) + 'px'; el.style.top = (rb.top + rb.height / 2) + 'px'; el.style.transform = 'rotate(540deg)'; }));
+  setTimeout(() => { el.remove(); b.classList.remove('flash'); void b.offsetWidth; b.classList.add('flash'); }, 750);
+}
+
+function bubbleAt(pid, html, bad) {
+  const d = document.querySelector(`.desk[data-id="${pid}"]`);
+  if (!d) return;
+  const r = d.getBoundingClientRect(), el = document.createElement('div');
+  el.className = 'react' + (bad ? ' bad' : ''); el.innerHTML = html;
+  el.style.left = (r.left + r.width * .3) + 'px'; el.style.top = (r.top - 10) + 'px';
+  document.body.appendChild(el); setTimeout(() => el.remove(), 1900);
+}
+function megaphone(m) {
+  SFX.mega();
+  const p = P(m.pid), el = document.createElement('div');
+  el.className = 'megacard';
+  el.innerHTML = `<div class="who">📢 ${p.avatar} ${esc(p.name)} SHOUTS:</div><div class="txt">${esc(m.text)}</div>`;
+  $('#mega').prepend(el);
+  setTimeout(() => el.classList.add('out'), 9000); setTimeout(() => el.remove(), 9500);
+}
+function react(m) {
+  const d = document.querySelector(`.desk[data-id="${m.pid}"]`);
+  if (!d) return;
+  const r = d.getBoundingClientRect();
+  const el = document.createElement('div');
+  el.className = 'react' + (m.ok ? '' : ' bad');
+  el.innerHTML = `${m.vip ? '⭐' : ''}${m.emoji} ${esc(pick(REACT[(m.ok ? 'ok' : 'bad') + m.verdict]))}${m.ok && m.streak >= 3 ? ` <span class="streak">🔥${m.streak}</span>` : ''}`;
+  el.style.left = (r.left + r.width * (.25 + Math.random() * .35)) + 'px';
+  el.style.top = (r.top - 10) + 'px';
+  document.body.appendChild(el);
+  setTimeout(() => el.remove(), 1900);
+  if (m.ok && m.streak >= 3) tone(500 + m.streak * 90, .15, 'triangle', .12);
+}
+
+// ---------- net ----------
+const MIRROR = location.pathname === '/mirror';
+if (MIRROR) document.body.classList.add('mirror');
+function connect() {
+  ws = new WebSocket(`ws://${location.host}`);
+  ws.onopen = () => ws.send(JSON.stringify({ t: 'host', mirror: MIRROR }));
+  ws.onmessage = e => {
+    const m = JSON.parse(e.data);
+    if (m.t === 'hello') TRAITS = m.traits;
+    else if (m.t === 'state') { S = m.s; recvAt = Date.now(); deadline = S.timeLeft != null ? Date.now() + S.timeLeft : null; render(); }
+    else if (m.t === 'news') SFX[m.kind]?.();
+    else if (m.t === 'fx') {
+      if (m.kind === 'disaster') { shake(); banner(`🚨 BREAKING 🚨<br>${esc(m.text)}`, '', 3200); }
+      else if (m.kind === 'memo') { const p = S?.players.find(p => p.id === m.owner); banner(`📢 NEW MEMO!<br><span style="font-size:.6em">A new rule just landed on ${p ? p.avatar + ' ' + esc(p.name) : 'a'}'s desk</span>`, 'memo', 3000); }
+      else if (m.kind === 'pass') { SFX.pass(); flyPaper(m.from, m.to); }
+      else if (m.kind === 'stamp') react(m);
+      else if (m.kind === 'megaphone') megaphone(m);
+      else if (m.kind === 'prank') { SFX.prank(); const a = P(m.pid), b = P(m.to); bubbleAt(m.to, `${{ bugs: '🪳🪳🪳', bees: '🐝🐝🐝', balloons: '🎈🎈🎈' }[m.prank]} from ${a.avatar} ${esc(a.name)}!`, true); }
+      else if (m.kind === 'toss') { SFX.good(); bubbleAt(m.pid, '🗑️ 3/3 baskets! Nothing but net!'); }
+      else if (m.kind === 'event') { SFX.event(); banner(`${esc(m.title)}<br><span style="font-size:.55em">${esc(m.text)}</span>`, 'event', 3500); }
+      else SFX[m.kind]?.();
+    }
+  };
+  ws.onclose = () => setTimeout(connect, 1000);
+}
+const cmd = m => ws?.readyState === 1 && ws.send(JSON.stringify(m));
+$('#skip').onclick = () => cmd({ t: 'skip' });
+$('#home').onclick = () => cmd({ t: 'lobby' });
+
+// ---------- render ----------
+const P = id => S.players.find(p => p.id === id) || { avatar: '❓', name: '???', traits: [] };
+function moodLook(m) { return m >= 75 ? ['😄', '#2e8b57'] : m >= 50 ? ['🙂', '#7fb35a'] : m >= 30 ? ['😐', '#f3a712'] : m >= 15 ? ['😠', '#e07a1f'] : ['🤬', '#c8323c']; }
+
+function renderOffice(s) {
+  const n = s.players.length;
+  $('#office').style.setProperty('--cols', n <= 4 ? 2 : n <= 6 ? 3 : 4);
+  $('#office').innerHTML = s.players.map(p => {
+    const mine = (s.forms || []).filter(f => f.holder === p.id);
+    const showReady = ['brief', 'news'].includes(s.phase) ? p.ready : s.phase === 'accuse' ? p.voted : false;
+    return `<div class="desk ${p.online ? '' : 'off'}" data-id="${p.id}" style="--c:${p.color}">
+      ${showReady ? '<div class="rdy">✓</div>' : ''}
+      <div class="top"><div class="av">${dressed(p.avatar, p.traits)}</div><div><div class="nm">${esc(p.name)}${s.phase === 'day' && p.streak >= 3 ? `<span class="streak">🔥${p.streak}</span>` : ''}</div>
+        <div class="meta"><span class="tr">${p.traits.map(trait).join(' ')}</span><span class="rb">📜 ${p.nRules} rule${p.nRules === 1 ? '' : 's'}</span></div></div>
+        ${s.phase === 'day' ? `<span class="cnt">${mine.length ? '📄 ' + mine.length : ''}</span>` : ''}</div>
+      <div class="stack">${mine.length ? mine.map(f => `<div class="tok ${f.vip ? 'vip' : ''} ${seenForms.has(f.id) ? '' : 'new'}" data-f="${f.id}" data-age="${f.age}" data-pat="${f.patience}"><span>${f.emoji}</span></div>`).join('') : `<span class="empty">${s.phase === 'day' ? '📭 inbox empty' : '☕ off duty'}</span>`}</div>
+    </div>`;
+  }).join('');
+  (s.forms || []).forEach(f => seenForms.add(f.id));
+  updateTokens();
+}
+function updateTokens() {
+  const dt = Date.now() - recvAt;
+  document.querySelectorAll('.tok').forEach(t => {
+    const p = Math.max(0, 1 - (+t.dataset.age + dt) / +t.dataset.pat);
+    t.style.setProperty('--p', p);
+    t.style.setProperty('--pc', p > .5 ? '#2e8b57' : p > .25 ? '#f3a712' : '#c8323c');
+  });
+}
+function renderFeed(s) {
+  const items = [...(s.news || [])].reverse();
+  $('#feed').innerHTML = items.length ? items.map(n => `<div class="item ${n.kind} ${seenNews.has(n.id) ? '' : 'new'}">${esc(n.text)}</div>`).join('')
+    : `<div class="item">Citizens are lining up outside… 🚶🚶‍♀️🚶</div>`;
+  items.forEach(n => seenNews.add(n.id));
+}
+function renderCity(s) {
+  const sky = SKIES[s.phase === 'lobby' ? 0 : s.day] || SKIES[0];
+  $('#city').style.setProperty('--sky1', sky[0]); $('#city').style.setProperty('--sky2', sky[1]);
+  const want = s.city ? Math.max(1, Math.round(s.city.mood / 11)) : 4;
+  if (want !== walkerCount) {
+    walkerCount = want;
+    const people = ['🚶', '🚶‍♀️', '🏃', '🧙', '🦝', '👵', '🤖', '👽', '🧒', '🛴', '🐕'];
+    $('#walkers').innerHTML = Array.from({ length: want }, (_, i) => `<div class="walker ${i % 2 ? 'rev' : ''}" style="animation-duration:${18 + Math.random() * 22}s;animation-delay:-${Math.random() * 30}s"><span>${pick(people)}</span></div>`).join('');
+  }
+  if (!s.city) { $('#lots').innerHTML = ''; $('#protest').innerHTML = ''; return; }
+  const now = Date.now();
+  $('#lots').innerHTML = s.city.lots.map(l => `<span class="lot ${l.fire ? 'fire' : ''} ${l.fresh && now - l.fresh < 1500 ? 'fresh' : ''}">${l.e}</span>`).join('');
+  const n = s.city.protest;
+  $('#protest').innerHTML = Array.from({ length: Math.min(n, 10) }, () => '<span>😡</span>').join('') + (n > 10 ? `<b style="font-size:1vw">+${n - 10}</b>` : '');
+}
+function renderHeader(s) {
+  $('#dayb').textContent = s.phase === 'lobby' ? 'NOW HIRING' : s.day ? `DAY ${s.day}/${s.days} · ${WEEKDAYS[s.day] || ''}` : '';
+  const m = s.mood ?? 70, [face, col] = moodLook(m);
+  $('#moodfill').style.width = m + '%'; $('#moodfill').style.background = col; $('#moodface').textContent = face;
+}
+
+function overlay(s) {
+  const readyRow = key => `<div class="readyrow">${s.players.map(p => `<div class="rchip ${p[key] ? 'on' : ''}"><span class="a">${p.avatar}</span>${esc(p.name)}<span class="st">${p[key] ? '✓ ' + (key === 'voted' ? 'voted' : 'ready') : 'waiting'}</span></div>`).join('')}</div>`;
+  switch (s.phase) {
+    case 'lobby': {
+      const on = s.players.filter(p => p.online);
+      return `<div class="lobby">
+        <div class="qrwrap"><img src="/qr.svg" alt="QR"><div class="s">📱 SCAN TO GET HIRED</div><div class="u">${esc(s.joinUrl.replace(/^https?:\/\//, ''))}</div></div>
+        <div>
+          <div class="ltitle">THE<br><b>MINISTRY</b></div>
+          <div class="lsub">A government office game for 2–8 clerks.<br>Shout the rules. Stamp the forms. Take the bribes.</div>
+          <div class="roster">${on.length ? on.map(p => `<div class="rp"><button class="x" data-kick="${p.id}">✕</button><span class="a">${p.avatar}</span><span class="n">${esc(p.name)}</span></div>`).join('') : '<div class="lsub">Waiting for clerks to scan in…</div>'}</div>
+          <button class="btn" id="start" ${on.length ? '' : 'disabled'}>🏛️ OPEN THE MINISTRY</button>
+          <div class="mirrorurl">📺 Mirror this screen on another TV/laptop: ${esc((s.mirrorUrl || '').replace(/^https?:\/\//, ''))}</div>
+        </div></div>`;
+    }
+    case 'brief':
+      return `<div class="panel" style="width:62vw">
+        <h1>DAY ${s.day}: ${WEEKDAYS[s.day]}</h1>
+        <h2>📜 ${s.newRules} new rule${s.newRules === 1 ? '' : 's'} issued. READ YOUR RULEBOOK!</h2>
+        ${s.day === 1 ? `<ul>
+          <li>Forms land on your phone. <b>APPROVE ✅</b>, <b>DENY ❌</b>, or <b>SEND ➡️</b> them to another clerk.</li>
+          <li>Every clerk has <b>different secret rules</b>. Nobody knows them all, so <b>shout them out!</b></li>
+          <li>⭐ <b>ALWAYS APPROVE</b> rules beat ❌ DENY rules. If no rule says deny, approve it.</li>
+          <li>🎩 Some rules say <b>who</b> may stamp. Check what everyone's wearing!</li>
+          <li>Correct stamp <b>+$10</b> · wrong stamp <b>−$5</b> and the city suffers. Don't let citizens wait too long!</li>
+          <li>💰 Shady citizens may offer you bribes… just don't get caught.</li></ul>`
+        : `<p>Forms will come faster today. ${s.day >= 3 ? '📢 Watch out for surprise memos mid-shift!' : ''}</p>`}
+        <p><b>Tap READY on your phone when you've read your rules.</b></p>
+        ${readyRow('ready')}</div>`;
+    case 'news': {
+      const pp = s.paper, lead = pp.headlines[0];
+      return `<div class="panel paperov">
+        <div class="mast"><div class="t">THE MINISTRY TIMES</div><div class="d"><span>VOL. ${pp.day}</span><span>${WEEKDAYS[pp.day]} EVENING EDITION</span><span>5¢</span></div></div>
+        ${pp.shutdown ? '<div class="closed">MINISTRY SHUT DOWN!</div>' : ''}
+        <div class="lead">${lead ? esc(lead.text) : 'A SUSPICIOUSLY QUIET DAY AT THE MINISTRY'}</div>
+        <div class="heads">${pp.headlines.slice(1).map(h => `<div>${esc(h.text)}</div>`).join('')}</div>
+        <div class="stats"><span>✅ ${pp.stats.correct} correct</span><span>❌ ${pp.stats.wrong} botched</span><span>🚪 ${pp.stats.lost} walked out</span><span>City mood ${moodLook(pp.mood)[0]} ${pp.mood}%</span></div>
+        <p style="text-align:center;margin-top:1vw;font-size:1.3vw">☕ Clerks are on break: spend your cash in the shop on your phone, then tap READY.</p>
+        ${readyRow('ready')}</div>`;
+    }
+    case 'accuse':
+      return `<div class="panel" style="width:60vw;text-align:center">
+        <h1>🕵️ FRIDAY NIGHT</h1><h2>Somebody in this office took bribes…</h2>
+        <p>Vote on your phone. Catch a crook: <b>+$40</b>. Accuse an innocent clerk: <b>−$20</b>.<br>If most of the office votes for a crook, <b>all their bribe money is seized!</b></p>
+        <div style="display:flex;justify-content:center">${readyRow('voted')}</div></div>`;
+    case 'final': {
+      const r = s.results, w = P(r[0].id);
+      return `<div class="panel" style="width:78vw">
+        <h1 style="text-align:center">🏆 ${w.avatar} ${esc(w.name)}</h1>
+        <h2 style="text-align:center">EMPLOYEE OF THE MONTH${s.shutdown ? ' (of a shut-down Ministry)' : ''}</h2>
+        <table class="res"><tr><th></th><th>Clerk</th><th>Cash</th><th>Stamps</th><th>Bribes</th><th>Suspected by</th><th>Worst disaster</th></tr>
+        ${r.map((x, i) => { const p = P(x.id); return `<tr class="${i === 0 ? 'win' : ''}"><td>${['🥇', '🥈', '🥉'][i] || i + 1}</td><td>${p.avatar} ${esc(p.name)}</td><td class="m">${money(x.money)}</td>
+          <td>✅${x.correct} ❌${x.wrong}</td><td>${x.bribeCount ? `💰${x.bribeCount} ($${x.bribes}) ${x.caught ? '<span class="caught">🚔 CAUGHT</span>' : ''}` : 'clean 😇'}</td>
+          <td>${x.votesAgainst}</td><td class="w">${esc(x.worst || 'none!')}</td></tr>`; }).join('')}</table>
+        <div class="awards">${r.flatMap(x => x.awards.map(a => `<div class="award">${P(x.id).avatar} ${esc(P(x.id).name)}: <b>${esc(a.title)}</b> · ${esc(a.desc)}</div>`)).join('')}</div>
+        <div style="text-align:center;margin-top:1.5vw"><button class="btn" id="again">🔁 NEW WEEK</button></div></div>`;
+    }
+  }
+  return '';
+}
+
+function render() {
+  const s = S;
+  renderHeader(s); renderOffice(s); renderFeed(s); renderCity(s);
+  const ovHTML = overlay(s), ov = $('#ov');
+  if (ovHTML) {
+    if (s.phase !== prevPhase || ['lobby', 'brief', 'news', 'accuse'].includes(s.phase)) {
+      ov.innerHTML = ovHTML;
+      ov.querySelector('.panel')?.style.setProperty('animation', s.phase === prevPhase ? 'none' : '');
+    }
+    ov.classList.add('show');
+    ov.classList.toggle('solid', ['lobby', 'final'].includes(s.phase));
+  } else ov.classList.remove('show', 'solid');
+  $('#ctrl').style.display = ['lobby', 'final'].includes(s.phase) ? 'none' : '';
+  $('#start')?.addEventListener('click', () => cmd({ t: 'start' }));
+  $('#again')?.addEventListener('click', () => cmd({ t: 'lobby' }));
+  ov.querySelectorAll('[data-kick]').forEach(b => b.onclick = () => cmd({ t: 'kick', id: b.dataset.kick }));
+
+  if (s.phase !== prevPhase) {
+    if (s.phase === 'day') SFX.bell();
+    if (['brief', 'day'].includes(s.phase) && ['lobby', undefined, null, 'final'].includes(prevPhase)) startMusic();
+    if (s.phase === 'news') SFX.whistle();
+    if (s.phase === 'final') { SFX.fanfare(); confetti(260); setTimeout(() => confetti(150), 1400); }
+    if (s.phase === 'lobby') { seenNews.clear(); seenForms.clear(); }
+    prevPhase = s.phase;
+  }
+}
+
+setInterval(() => {
+  updateTokens();
+  const sun = $('#sun');
+  if (S?.phase === 'day' && deadline) {
+    const t = Math.min(1, Math.max(0, 1 - (deadline - Date.now()) / (S.dayLen || 150000)));
+    sun.style.left = (4 + t * 88) + '%'; sun.style.top = (55 - Math.sin(Math.PI * t) * 48) + '%';
+  } else if (S?.phase === 'lobby') { sun.style.left = '82%'; sun.style.top = '12%'; }
+  const ev = S?.event, evLeft = ev?.left != null ? ev.left - (Date.now() - recvAt) : null;
+  const evOn = ev && S.phase === 'day' && (evLeft == null || evLeft > 0);
+  $('#evpill').style.display = evOn && evLeft != null ? 'block' : 'none';
+  if (evOn && evLeft != null) $('#evpill').textContent = `${ev.title} · ${Math.ceil(evLeft / 1000)}s`;
+  $('#quiet').style.display = evOn && ev.kind === 'quiet' ? 'block' : 'none';
+  const c = $('#clock');
+  if (!deadline) { c.textContent = '--'; c.classList.remove('low'); return; }
+  const sec = Math.max(0, Math.ceil((deadline - Date.now()) / 1000));
+  c.textContent = `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, '0')}`;
+  const low = sec <= 10 && S?.phase === 'day';
+  c.classList.toggle('low', low);
+  if (low && sec !== lastTick && sec > 0) SFX.tick();
+  lastTick = sec;
+}, 250);
+
+connect();
+</script>
+</body>
+</html>
