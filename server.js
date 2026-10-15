@@ -24,6 +24,8 @@ function lanIP() {
 const PUBLIC_URL = (process.env.PUBLIC_URL || `http://${lanIP()}:${PORT}`).replace(/\/$/, '');
 const joinUrl = code => `${PUBLIC_URL}/play?room=${code}`;
 const MAX_ROOMS = 300, MAX_CONNECTIONS = 3000, MAX_SCREENS = 6;
+// One visitor (IP) can't use up the whole server: a family needs a TV or two and a few phones.
+const MAX_ROOMS_PER_IP = 4, MAX_CONNECTIONS_PER_IP = 30;
 const ROOM_IDLE_MS = 30 * 60 * 1000;
 
 // ---------- HTTP ----------
@@ -57,10 +59,13 @@ const cleanName = n => String(n || '').replace(/[<>&"'`\u0000-\u001f]/g, '').tri
 // ---------- rooms ----------
 // Every TV screen opens its own room; phones join it by code. Only the screen that
 // created a room (it holds the room's secret key) can start, skip or kick.
-function createRoom(code) {
+function createRoom(code, ip) {
   const key = crypto.randomBytes(16).toString('hex');
   const JOIN_URL = joinUrl(code);
   let lastActive = Date.now();
+  // A phone reconnects to its seat with a private id; everyone else only sees a random
+  // public id, so knowing a player's id doesn't let you take over their seat.
+  const seats = new Map();
   // ---------- state ----------
   const players = new Map();
   const hosts = new Set();
@@ -596,11 +601,13 @@ function createRoom(code) {
     lastActive = Date.now();
     if (hosts.has(ws)) return mirrors.has(ws) ? undefined : hostCmd(m);
     if (m.t === 'join') {
-      const id = String(m.id || '').slice(0, 40);
-      if (!id) return;
+      const secret = String(m.id || '').slice(0, 40);
+      if (secret.length < 8) return;
       const name = cleanName(m.name);
-      let p = players.get(id);
+      let id = seats.get(secret);
+      let p = id && players.get(id);
       if (!p) {
+        id = crypto.randomBytes(6).toString('hex');
         if (!name) return send(ws, { t: 'needName' });
         if (players.size >= 8) return send(ws, { t: 'full' });
         const used = new Set([...players.values()].map(x => x.avatar));
@@ -611,6 +618,7 @@ function createRoom(code) {
           color: COLORS.find(c => !usedC.has(c)) || COLORS[0],
         };
         players.set(id, p);
+        seats.set(secret, id);
         broadcastHosts({ t: 'fx', kind: 'join' });
       } else if (name && g.phase === 'lobby') p.name = name;
       if (p.ws && p.ws !== ws) p.ws.close();
@@ -632,7 +640,7 @@ function createRoom(code) {
     }
   }
   const idle = () => !hosts.size && ![...players.values()].some(p => p.ws) && Date.now() - lastActive > ROOM_IDLE_MS;
-  return { code, key, attach, message, close, idle, dispose: clearTimers };
+  return { code, key, ip, attach, message, close, idle, dispose: clearTimers };
 }
 
 const send = (ws, m) => { if (ws && ws.readyState === 1) ws.send(JSON.stringify(m)); };
@@ -647,15 +655,21 @@ setInterval(() => { for (const [c, r] of rooms) if (r.idle()) { r.dispose(); roo
 
 // ---------- WebSocket ----------
 const wss = new WebSocketServer({ server, path: '/ws', maxPayload: 4096 });
+const ipConnections = new Map();
+const roomsOf = ip => [...rooms.values()].filter(r => r.ip === ip).length;
 wss.on('connection', (ws, req) => {
-  if (wss.clients.size > MAX_CONNECTIONS) return ws.close(1013, 'busy');
+  // Fly's proxy sets Fly-Client-IP; locally it's the socket's own address.
+  const ip = String(req.headers['fly-client-ip'] || req.socket.remoteAddress);
+  if (wss.clients.size > MAX_CONNECTIONS || (ipConnections.get(ip) || 0) >= MAX_CONNECTIONS_PER_IP) { send(ws, { t: 'busy' }); return ws.close(1013, 'busy'); }
+  ipConnections.set(ip, (ipConnections.get(ip) || 0) + 1);
+  ws.on('close', () => { const n = ipConnections.get(ip) - 1; n > 0 ? ipConnections.set(ip, n) : ipConnections.delete(ip); });
   const q = new URL(req.url, 'http://x').searchParams;
   const role = ['host', 'mirror', 'play'].includes(q.get('role')) ? q.get('role') : 'play';
   const code = String(q.get('room') || '').toUpperCase().slice(0, 4);
   let room = rooms.get(code);
   if (role === 'host' && !(room && room.key === q.get('key'))) {
-    if (rooms.size >= MAX_ROOMS) { send(ws, { t: 'busy' }); return ws.close(); }
-    room = createRoom(newCode());
+    if (rooms.size >= MAX_ROOMS || roomsOf(ip) >= MAX_ROOMS_PER_IP) { send(ws, { t: 'busy' }); return ws.close(); }
+    room = createRoom(newCode(), ip);
     rooms.set(room.code, room);
   }
   if (!room) { send(ws, { t: 'noRoom' }); return ws.close(); }
