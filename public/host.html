@@ -364,12 +364,22 @@ function react(m) {
 // ---------- net ----------
 const MIRROR = location.pathname === '/mirror';
 if (MIRROR) document.body.classList.add('mirror');
+// The TV opens its own room and keeps its key for this tab, so a reload reopens the same room.
+const SAVED = 'min_room';
+const saved = () => { try { return JSON.parse(sessionStorage.getItem(SAVED) || '{}'); } catch { return {}; } };
+function wsUrl() {
+  const base = `${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}/ws`;
+  if (MIRROR) return `${base}?role=mirror&room=${encodeURIComponent(new URLSearchParams(location.search).get('room') || '')}`;
+  const r = saved();
+  return `${base}?role=host&room=${encodeURIComponent(r.code || '')}&key=${encodeURIComponent(r.key || '')}`;
+}
 function connect() {
-  ws = new WebSocket(`ws://${location.host}`);
-  ws.onopen = () => ws.send(JSON.stringify({ t: 'host', mirror: MIRROR }));
+  ws = new WebSocket(wsUrl());
   ws.onmessage = e => {
     const m = JSON.parse(e.data);
-    if (m.t === 'hello') TRAITS = m.traits;
+    if (m.t === 'room') { try { sessionStorage.setItem(SAVED, JSON.stringify({ code: m.code, key: m.key })); } catch {} }
+    else if (m.t === 'noRoom' || m.t === 'busy') { document.body.innerHTML = `<h1 style="color:#f6ecd2;text-align:center;margin-top:20vh;font-family:sans-serif">${m.t === 'busy' ? 'The Ministry is full right now. Try again in a few minutes.' : 'No game with that code. Check the link on the TV.'}</h1>`; ws.onclose = null; }
+    else if (m.t === 'hello') TRAITS = m.traits;
     else if (m.t === 'state') { S = m.s; recvAt = Date.now(); deadline = S.timeLeft != null ? Date.now() + S.timeLeft : null; render(); }
     else if (m.t === 'news') SFX[m.kind]?.();
     else if (m.t === 'fx') {
@@ -452,7 +462,7 @@ function overlay(s) {
     case 'lobby': {
       const on = s.players.filter(p => p.online);
       return `<div class="lobby">
-        <div class="qrwrap"><img src="/qr.svg" alt="QR"><div class="s">📱 SCAN TO GET HIRED</div><div class="u">${esc(s.joinUrl.replace(/^https?:\/\//, ''))}</div></div>
+        <div class="qrwrap"><img src="/qr.svg?room=${esc(s.room)}" alt="QR"><div class="s">📱 SCAN TO GET HIRED</div><div class="u">${esc(s.joinUrl.replace(/^https?:\/\//, ''))}</div></div>
         <div>
           <div class="ltitle">THE<br><b>MINISTRY</b></div>
           <div class="lsub">A government office game for 2–8 clerks.<br>Shout the rules. Stamp the forms. Take the bribes.</div>

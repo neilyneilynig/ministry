@@ -18,6 +18,11 @@ corrupt.
 
 ## Play
 
+**Play now:** open **https://the-ministry-game.fly.dev** on a TV or laptop and scan the QR code
+with your phones. Every screen gets its own room code, so there's nothing to install.
+
+## Run it yourself
+
 Needs [Node.js](https://nodejs.org) 18 or newer.
 
 ```bash
@@ -28,10 +33,11 @@ npm start
 ```
 
 Open `http://localhost:3000/` on the computer hooked up to the TV, then have everyone scan
-the QR code with a phone on the same Wi-Fi. A game takes about 30 minutes.
+the QR code with a phone on the same Wi-Fi. Each TV screen gets its own 4-letter room code. A game takes about 30 minutes.
 
 - `/mirror` shows the TV screen on a second display or laptop.
 - `PORT=4000 npm start` changes the port.
+- `PUBLIC_URL=https://example.com npm start` sets the address phones are sent to when you host it online.
 - `DAY_SECS=60 npm start` makes each in-game day shorter (default 150 seconds).
 
 If phones can't connect, check they're on the same network (not a guest network) and that

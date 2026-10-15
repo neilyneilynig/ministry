@@ -190,8 +190,21 @@ function toast(cls, html, ms = 2600) {
 }
 $('#toast').onclick = () => { $('#toast').className = ''; };
 
+// Phones join one TV's room: /play?room=ABCD (the QR code includes it).
+const ROOM = (new URLSearchParams(location.search).get('room') || '').toUpperCase().replace(/[^A-Z]/g, '').slice(0, 4);
+function askRoom(msg) {
+  $('#top').innerHTML = ''; $('#tabs').style.display = 'none'; $('#off').style.display = 'none';
+  $('#main').innerHTML = `<div class="join"><h1>THE<br><b>MINISTRY</b></h1>
+    <p style="text-align:center" class="type">${esc(msg)}</p>
+    <input id="code" maxlength="4" placeholder="ROOM CODE" autocomplete="off" style="text-transform:uppercase;text-align:center;letter-spacing:.3em">
+    <button class="btn" id="enter">ENTER 🏛️</button></div>`;
+  const go = () => { const c = $('#code').value.toUpperCase().replace(/[^A-Z]/g, ''); if (c.length === 4) location.search = `?room=${c}`; };
+  $('#enter').onclick = go;
+  $('#code').onkeydown = e => { if (e.key === 'Enter') go(); };
+}
 function connect() {
-  ws = new WebSocket(`ws://${location.host}`);
+  if (!ROOM) return askRoom('Type the 4-letter code shown on the TV');
+  ws = new WebSocket(`${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}/ws?role=play&room=${ROOM}`);
   ws.onopen = () => { $('#off').style.display = 'none'; if (me.name) send({ t: 'join', id: myId, name: me.name, avatar: me.avatar }); };
   ws.onmessage = e => {
     const m = JSON.parse(e.data);
@@ -215,6 +228,7 @@ function connect() {
       if (m.kind === 'newrule' && S?.phase === 'day') { buzz([100, 50, 100]); toast('info', `<div class="h">📢 MEMO! You got a new rule.</div><div class="r">Check your 📜 Rules tab and tell everyone!</div>`, 3500); }
     }
     else if (m.t === 'needName' || m.t === 'kicked') { me.name = ''; store.set('min_name', ''); S = null; showJoin(); }
+    else if (m.t === 'noRoom') { ws.onclose = null; askRoom('No game with that code. Check the TV and try again.'); }
     else if (m.t === 'full') $('#main').innerHTML = '<div class="center"><div class="bigE">😬</div><h2>The office is full!</h2><p>Max 8 clerks.</p></div>';
   };
   ws.onclose = () => { $('#off').style.display = 'block'; setTimeout(connect, 1000); };
