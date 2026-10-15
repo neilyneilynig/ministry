@@ -35,7 +35,8 @@ const server = http.createServer(async (req, res) => {
   if (url === '/qr.svg') {
     const code = String(new URLSearchParams(query).get('room') || '').toUpperCase();
     if (!rooms.has(code)) { res.writeHead(404); return res.end(); }
-    const svg = await QRCode.toString(joinUrl(code), { type: 'svg', margin: 1, color: { dark: '#2b2118', light: '#f6ecd2' } });
+    const room = rooms.get(code);
+    const svg = room.qr || (room.qr = await QRCode.toString(joinUrl(code), { type: 'svg', margin: 1, color: { dark: '#2b2118', light: '#f6ecd2' } }));
     res.writeHead(200, { 'Content-Type': 'image/svg+xml' });
     return res.end(svg);
   }
@@ -66,6 +67,7 @@ function createRoom(code, ip) {
   // A phone reconnects to its seat with a private id; everyone else only sees a random
   // public id, so knowing a player's id doesn't let you take over their seat.
   const seats = new Map();
+  const dropPlayer = id => { players.delete(id); for (const [k, v] of seats) if (v === id) seats.delete(k); };
   // ---------- state ----------
   const players = new Map();
   const hosts = new Set();
@@ -465,7 +467,7 @@ function createRoom(code, ip) {
   function toLobby() {
     clearTimers();
     forms.clear(); order = []; rules = [];
-    for (const [id, p] of players) if (!p.ws) players.delete(id);
+    for (const [id, p] of players) if (!p.ws) dropPlayer(id);
     g = { phase: 'lobby' };
     sync();
   }
@@ -523,7 +525,7 @@ function createRoom(code, ip) {
     else if (m.t === 'skip') ({ brief: startDay, day: endDay, news: afterNews, accuse: finish }[g.phase] || (() => {}))();
     else if (m.t === 'kick' && players.has(m.id) && g.phase === 'lobby') {
       send(players.get(m.id).ws, { t: 'kicked' });
-      players.delete(m.id); sync();
+      dropPlayer(m.id); sync();
     }
   }
 
@@ -633,7 +635,7 @@ function createRoom(code, ip) {
     const p = conn.pid && players.get(conn.pid);
     if (p && p.ws === ws) {
       p.ws = null;
-      if (g.phase === 'lobby') players.delete(conn.pid);
+      if (g.phase === 'lobby') dropPlayer(conn.pid);
       else if (g.phase === 'accuse' && online().length && online().every(x => x.vote)) return finish();
       else if (['brief', 'news'].includes(g.phase) && allReady()) return g.phase === 'brief' ? startDay() : afterNews();
       sync();
