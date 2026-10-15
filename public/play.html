@@ -306,7 +306,7 @@ function tabsHTML(s) {
 function render() {
   const s = S;
   if (!s) return;
-  const mp = s.players.find(p => p.id === myId);
+  const mp = s.players.find(p => p.id === s.me);
   if (!s.inGame) {
     $('#tabs').style.display = 'none';
     $('#top').innerHTML = mp ? `<span class="who">${mp.avatar} ${esc(mp.name)}</span>` : '';
@@ -347,13 +347,13 @@ function render() {
       else {
         main.innerHTML = `<h2 style="text-align:center">🕵️ Who took bribes?</h2>
           <p style="text-align:center">Catch a crook: +$40 · Wrong: −$20</p>
-          <div class="vote">${s.players.filter(p => p.id !== myId).map(p => `<button data-v="${p.id}"><span>${p.avatar}</span>${esc(p.name)}</button>`).join('')}
+          <div class="vote">${s.players.filter(p => p.id !== s.me).map(p => `<button data-v="${p.id}"><span>${p.avatar}</span>${esc(p.name)}</button>`).join('')}
           <button data-v="none"><span>😇</span>Nobody, I trust them</button></div>`;
         main.querySelectorAll('[data-v]').forEach(b => b.onclick = () => { send({ t: 'vote', id: b.dataset.v }); buzz(30); });
       }
       break;
     case 'final': {
-      const r = s.results, i = r.findIndex(x => x.id === myId), x = r[i];
+      const r = s.results, i = r.findIndex(x => x.id === s.me), x = r[i];
       main.innerHTML = `<div class="center"><div class="bigE">${i === 0 ? '🏆' : ['🥇', '🥈', '🥉'][i] || '📎'}</div>
         <h1>${i === 0 ? 'EMPLOYEE OF THE MONTH!' : `#${i + 1}`}</h1><h2>${money(x.money)}</h2>
         <p>✅ ${x.correct} correct · ❌ ${x.wrong} botched<br>${x.bribeCount ? `💰 ${x.bribeCount} bribe${x.bribeCount > 1 ? 's' : ''} ($${x.bribes}) ${x.caught ? '🚔 <b>CAUGHT &amp; SEIZED!</b>' : '😏 got away with it'}` : '😇 squeaky clean'}
@@ -379,7 +379,7 @@ function renderDesk(s) {
     bindMega(); bindPrank(s);
     return;
   }
-  const others = s.players.filter(p => p.id !== myId && p.online);
+  const others = s.players.filter(p => p.id !== s.me && p.online);
   main.innerHTML = `${decreeHTML(s)}${formHTML(f)}
     <div class="stamps">${opp
       ? '<button class="ap" style="background:var(--red);box-shadow:0 5px 0 #8a1f27" data-v="deny">❌ DENY</button><button class="dn" style="background:var(--green);box-shadow:0 5px 0 #1d5c39" data-v="approve">✅ APPROVE</button>'
@@ -433,7 +433,7 @@ let pranking = false;
 function prankHTML(s) {
   if (!s.pranks) return '';
   if (!pranking) return `<div class="prankrow"><button id="prankgo">🪳 Prank a coworker (${s.pranks})</button></div>`;
-  return `<div class="prankrow"><span style="font-size:13px;width:100%">Who gets pranked?</span>${s.players.filter(p => p.id !== myId && p.online).map(p => `<button data-prank="${p.id}">${p.avatar} ${esc(p.name)}</button>`).join('')}<button data-prank="">✖</button></div>`;
+  return `<div class="prankrow"><span style="font-size:13px;width:100%">Who gets pranked?</span>${s.players.filter(p => p.id !== s.me && p.online).map(p => `<button data-prank="${p.id}">${p.avatar} ${esc(p.name)}</button>`).join('')}<button data-prank="">✖</button></div>`;
 }
 function bindPrank(s) {
   $('#prankgo')?.addEventListener('click', () => { pranking = true; lastKey = ''; render(); });
