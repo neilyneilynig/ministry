@@ -5,13 +5,13 @@ const os = require('os');
 const crypto = require('crypto');
 const { WebSocketServer } = require('ws');
 const QRCode = require('qrcode');
-const { TAGS, TYPES, TRAITS, ATTS, INKS, NAMES, PERMITS, QUOTES } = require('./content');
+const { TAGS, TYPES, TRAITS, ATTS, INKS, NAMES, PERMITS, QUOTES, SCANNERS, MARKS, BAG, WEEKDAYS } = require('./content');
 
 const PORT = Number(process.env.PORT) || 3000;
 const DAYS = 5;
 const DAY_SECS = Number(process.env.DAY_SECS) || 150;
 const BRIEF_SECS = 20, NEWS_SECS = 50, ACCUSE_SECS = 45;
-const PRICES = { hat: 30, glasses: 30, mustache: 30, bowtie: 30, peek: 20, shred: 15, prank: 15 };
+const PRICES = { hat: 30, glasses: 30, mustache: 30, bowtie: 30, peek: 20, shred: 15, prank: 15, turbo: 25 };
 
 function lanIP() {
   for (const [name, addrs] of Object.entries(os.networkInterfaces())) {
@@ -50,7 +50,10 @@ const server = http.createServer(async (req, res) => {
 const AVATARS = ['🦊', '🐸', '🐼', '🦄', '🐙', '🐯', '🐵', '🐧', '🦖', '🐝', '🐨', '🦁', '🐷', '🐰', '🐻', '🐮'];
 const COLORS = ['#e4572e', '#29a19c', '#f3a712', '#6a4c93', '#3d7dca', '#d1495b', '#66a182', '#b5838d'];
 const BUILDINGS = ['🏠', '🏢', '🏪', '🏡', '🏬', '🏫', '🏤', '🏦'];
-const tagKeys = Object.keys(TAGS), typeKeys = Object.keys(TYPES), traitKeys = Object.keys(TRAITS);
+const tagKeys = Object.keys(TAGS), typeKeys = Object.keys(TYPES), traitKeys = Object.keys(TRAITS), scanKeys = Object.keys(SCANNERS);
+const contraband = Object.keys(BAG).filter(b => !['nothing', 'teddy'].includes(b));
+// Day 1 is Monday; anything before that expired last week.
+const dayName = d => d >= 1 ? WEEKDAYS[(d - 1) % 7] : `LAST ${WEEKDAYS[(d + 6) % 7]}`;
 const pick = a => a[Math.floor(Math.random() * a.length)];
 const shuffle = a => { a = [...a]; for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
 const clamp = (n, lo, hi) => Math.max(lo, Math.min(hi, n));
@@ -96,6 +99,15 @@ function createRoom(code, ip) {
       case 'type': return f.type === c.v;
       case 'att': return f.atts.includes(c.v);
       case 'noatt': return !f.atts.includes(c.v);
+      case 'notpaid': return f.fee !== 'paid';
+      case 'vip': return !!f.vip;
+      case 'mark': return f.mark === c.v;
+      case 'bag': return f.bag === c.v;
+      case 'bagany': return f.bag !== 'nothing';
+      case 'impostor': return f.impostor;
+      case 'expired': return f.idExp < g.day;
+      case 'fever': return f.temp >= 40;
+      case 'cold': return f.temp < 20;
     }
     return false;
   }
@@ -110,13 +122,34 @@ function createRoom(code, ip) {
     () => { const ty = pick(typeKeys), t = pick(tagKeys); return { when: [{ k: 'type', v: ty }, { k: 'tag', v: t }], text: `DENY ${TYPES[ty]} ${ty.toUpperCase()}S asking for ${TAGS[t]} permits.` }; },
     () => { const t = pick(tagKeys); return { when: [{ k: 'mood', v: 'angry' }, { k: 'tag', v: t }], text: `DENY 😠 ANGRY citizens asking for ${TAGS[t]} permits.` }; },
     () => { const ty = pick(typeKeys); return { when: [{ k: 'type', v: ty }, { k: 'noatt', v: 'Proof of Existence' }], text: `DENY ${TYPES[ty]} ${ty.toUpperCase()}S without "Proof of Existence".` }; },
+    () => { const t = pick(tagKeys); return { when: [{ k: 'tag', v: t }, { k: 'notpaid' }], text: `DENY ${TAGS[t]} permits unless the fee is PAID in real 💵 money.` }; },
+    () => { const ty = pick(typeKeys), i = pick(Object.keys(INKS)); return { when: [{ k: 'type', v: ty }, { k: 'ink', v: i }], text: `DENY ${TYPES[ty]} ${ty.toUpperCase()}S who wrote in ${INKS[i].toUpperCase()}.` }; },
+    // scanner rules: the evidence is hidden until someone scans the form
+    () => ({ when: [{ k: 'mark', v: 'none' }], text: 'DENY FORGED forms! 🔦 UV-scan them: every real form has a watermark.' }),
+    () => ({ when: [{ k: 'mark', v: 'fish' }], text: 'DENY forms with a 🐟 FISH watermark (🔦 UV). The Fish Ministry is a scam.' }),
+    () => { const b = pick(contraband); return { when: [{ k: 'bag', v: b }], text: `DENY anyone smuggling ${BAG[b].replace(/^(\S+) (an?|47) /, '$1 ').toUpperCase()}. 🩻 X-RAY their bag!` }; },
+    () => { const t = pick(tagKeys); return { when: [{ k: 'tag', v: t }, { k: 'bagany' }], text: `DENY ${TAGS[t]} permits if the 🩻 X-RAY finds ANYTHING in their bag.` }; },
+    () => ({ when: [{ k: 'impostor' }], text: 'DENY IMPOSTORS: the name on their 🪪 ID must match the form.' }),
+    () => ({ when: [{ k: 'expired' }], text: 'DENY anyone whose 🪪 ID card has EXPIRED. Check the date!' }),
+    () => ({ when: [{ k: 'fever' }], text: "DENY anyone with a 🌡️ FEVER (40° or more). Go home, you're sick!" }),
+    () => { const t = pick(tagKeys); return { when: [{ k: 'cold' }, { k: 'tag', v: t }], text: `DENY ice-cold citizens (🌡️ under 20°) asking for ${TAGS[t]} permits. Probably undead.` }; },
   ];
   const ALLOW_GEN = [
     () => ({ when: [{ k: 'mood', v: 'crying' }], text: 'ALWAYS APPROVE 😭 CRYING citizens. We are not monsters.' }),
     () => { const ty = pick(typeKeys); return { when: [{ k: 'type', v: ty }], text: `ALWAYS APPROVE ${TYPES[ty]} ${ty.toUpperCase()}S. They have friends in high places.` }; },
     () => { const a = pick(ATTS); return { when: [{ k: 'att', v: a }], text: `ALWAYS APPROVE anything with "${a}" attached.` }; },
     () => ({ when: [{ k: 'ink', v: 'glitter' }], text: 'ALWAYS APPROVE ✨ GLITTER PEN forms. Glitter is the law.' }),
+    () => ({ when: [{ k: 'mark', v: 'crown' }], text: 'ALWAYS APPROVE forms with a 👑 CROWN watermark (🔦 UV). Royal business.' }),
+    () => ({ when: [{ k: 'bag', v: 'teddy' }], text: 'ALWAYS APPROVE anyone carrying 🧸 a teddy bear (🩻 X-RAY). Aww.' }),
+    () => { const ty = pick(typeKeys), a = pick(ATTS); return { when: [{ k: 'type', v: ty }, { k: 'att', v: a }], text: `ALWAYS APPROVE ${TYPES[ty]} ${ty.toUpperCase()}S who attached "${a}".` }; },
   ];
+  // Procedure rules: the verdict can be right and you still get in trouble for skipping the scan.
+  function genScan() {
+    const tool = pick(scanKeys), s = `${SCANNERS[tool].e} ${SCANNERS[tool].n}`;
+    if (Math.random() < 0.2) return { when: [{ k: 'vip' }], tool, text: `Every ⭐ VIP must go through the ${s} before anyone stamps it.` };
+    const t = pick(tagKeys);
+    return { when: [{ k: 'tag', v: t }], tool, text: `${TAGS[t]} permits must be checked with the ${s} before stamping.` };
+  }
   function genWho() {
     const clerks = order.map(id => players.get(id));
     const held = traitKeys.filter(t => clerks.some(p => p.traits.includes(t)));
@@ -131,9 +164,10 @@ function createRoom(code, ip) {
   }
   function genRule(kind) {
     for (let i = 0; i < 40; i++) {
-      const r = kind === 'deny' ? pick(DENY_GEN)() : kind === 'allow' ? pick(ALLOW_GEN)() : genWho();
+      const r = kind === 'deny' ? pick(DENY_GEN)() : kind === 'allow' ? pick(ALLOW_GEN)() : kind === 'scan' ? genScan() : genWho();
       if (rules.some(x => x.text === r.text)) continue;
       if (kind === 'who' && rules.some(x => x.kind === 'who' && x.when[0].v === r.when[0].v)) continue;
+      if (kind === 'scan' && rules.some(x => x.kind === 'scan' && x.tool === r.tool && x.when[0].v === r.when[0].v)) continue;
       return { ...r, kind };
     }
     return null;
@@ -142,7 +176,7 @@ function createRoom(code, ip) {
     const added = [];
     for (let i = 0; i < k; i++) {
       const roll = Math.random();
-      const kind = g.day === 1 ? ['deny', 'who', 'allow', 'deny', 'deny', 'who'][i % 6] : roll < 0.5 ? 'deny' : roll < 0.75 ? 'who' : 'allow';
+      const kind = g.day === 1 ? ['deny', 'who', 'allow', 'deny', 'scan', 'who'][i % 6] : roll < 0.45 ? 'deny' : roll < 0.62 ? 'who' : roll < 0.8 ? 'scan' : 'allow';
       const r = genRule(kind);
       if (!r) continue;
       const counts = order.map(id => [id, rules.filter(x => x.owner === id).length]);
@@ -158,13 +192,28 @@ function createRoom(code, ip) {
     const allow = rules.find(r => r.kind === 'allow' && matches(r, f));
     const deny = rules.find(r => r.kind === 'deny' && matches(r, f));
     const who = rules.filter(r => r.kind === 'who' && matches(r, f));
-    return { verdict: allow ? 'approve' : deny ? 'deny' : 'approve', allow, deny, who };
+    const scan = rules.filter(r => r.kind === 'scan' && matches(r, f));
+    return { verdict: allow ? 'approve' : deny ? 'deny' : 'approve', allow, deny, who, scan };
   }
   function canAny(f, name, type) { const t = { ...f, name, type }; return order.some(id => canStamp(players.get(id), judge(t).who)); }
   const canStamp = (p, who) => who.every(r => (r.neg ? !p.traits.includes(r.trait) : p.traits.includes(r.trait)));
 
   // ---------- forms ----------
   const VIPS = [['The Mayor', 'grandma'], ['Duchess Fluffington', 'raccoon'], ['A Famous Pop Star', 'alien'], ['The King of Sweden', 'vampire'], ['A Very Important Goose', 'pirate'], ['The Ghost of Elvis', 'ghost'], ['Robo-President 3000', 'robot']];
+  // The secrets only a scanner shows.
+  function hide(f) {
+    const r = Math.random();
+    f.mark = r < 0.12 ? 'none' : r < 0.32 ? 'crown' : r < 0.66 ? 'unicorn' : 'fish';
+    f.bag = Math.random() < 0.45 ? 'nothing' : pick(Object.keys(BAG).filter(b => b !== 'nothing'));
+    const undead = ['ghost', 'vampire', 'robot'].includes(f.type);
+    const t = Math.random();
+    f.temp = undead && t < 0.7 ? 2 + Math.floor(Math.random() * 150) / 10
+      : t < 0.12 ? 40 + Math.floor(Math.random() * 30) / 10
+      : t < 0.17 ? 8 + Math.floor(Math.random() * 100) / 10
+      : 36 + Math.floor(Math.random() * 18) / 10;
+    f.impostor = Math.random() < 0.12;
+    f.idExp = Math.random() < 0.15 ? g.day - 1 - Math.floor(Math.random() * 3) : g.day + Math.floor(Math.random() * 4);
+  }
   function genForm(wantBribe, vip) {
     for (let i = 0; i < 30; i++) {
       const p = pick(PERMITS), r1 = Math.random(), r2 = Math.random(), r3 = Math.random();
@@ -176,13 +225,16 @@ function createRoom(code, ip) {
         fee: r2 < 0.7 ? 'paid' : r2 < 0.85 ? 'unpaid' : 'buttons',
         mood: r3 < 0.6 ? 'calm' : r3 < 0.8 ? 'angry' : 'crying',
         atts: ATTS.filter(() => Math.random() < 0.3),
+        scans: {},
       };
+      hide(f);
       const j = judge(f);
       if (!order.some(id => canStamp(players.get(id), j.who))) continue;
       if (wantBribe && j.verdict !== 'deny') continue;
       if (wantBribe) f.bribe = pick([30, 40, 50, 60]);
       f.quote = pick(Math.random() < 0.35 ? QUOTES[f.mood] : QUOTES.any);
       if (vip) { const [n, t] = pick(VIPS); if (canAny(f, n, t)) { f.name = n; f.type = t; } f.vip = true; }
+      f.idName = f.impostor ? pick(NAMES.filter(n => n !== f.name)) : f.name;
       return f;
     }
     return wantBribe ? genForm(false, vip) : null;
@@ -198,7 +250,7 @@ function createRoom(code, ip) {
     const sorted = shuffle(clerks).sort((a, b) => load(a.id) - load(b.id));
     f.holder = (Math.random() < 0.6 ? sorted[0] : pick(clerks)).id;
     f.born = Date.now();
-    f.patience = (f.vip ? 40 : 58 - g.day * 3) * 1000;
+    f.patience = (f.vip ? 48 : 66 - g.day * 3) * 1000;
     forms.set(f.id, f);
     send(players.get(f.holder).ws, { t: 'fx', kind: 'newform' });
     broadcastHosts({ t: 'fx', kind: 'arrive' });
@@ -223,7 +275,8 @@ function createRoom(code, ip) {
     const f = forms.get(fid), p = players.get(pid);
     if (g.phase !== 'day' || !f || f.holder !== pid || !['approve', 'deny'].includes(verdict)) return;
     forms.delete(fid);
-    const j = judge(f), whoOk = canStamp(p, j.who), verdictOk = verdict === j.verdict, ok = verdictOk && whoOk;
+    const j = judge(f), whoOk = canStamp(p, j.who), verdictOk = verdict === j.verdict;
+    const skipped = j.scan.find(r => !f.scans[r.tool]), ok = verdictOk && whoOk && !skipped;
     const st = g.stats;
     const cname = `${TYPES[f.type]} ${f.name}`;
     let why = null;
@@ -249,8 +302,9 @@ function createRoom(code, ip) {
       if (!whoOk) {
         const r = j.who.find(r => !canStamp(p, [r]));
         why = { text: r.text, owner: r.owner };
-      } else if (verdict === 'approve') why = { text: j.deny.text, owner: j.deny.owner };
-      else why = j.allow ? { text: j.allow.text, owner: j.allow.owner } : { text: 'No rule said to deny this one. When in doubt, APPROVE!', owner: null };
+      } else if (!verdictOk && verdict === 'approve') why = { text: j.deny.text, owner: j.deny.owner };
+      else if (!verdictOk) why = j.allow ? { text: j.allow.text, owner: j.allow.owner } : { text: 'No rule said to deny this one. When in doubt, APPROVE!', owner: null };
+      else why = { text: `Right stamp, but you skipped the ${SCANNERS[skipped.tool].e} ${SCANNERS[skipped.tool].n}! ${skipped.text}`, owner: skipped.owner };
 
       if (!verdictOk && verdict === 'approve') {
         const lot = randomLot(true);
@@ -264,9 +318,13 @@ function createRoom(code, ip) {
         addNews('protest', `${cname} protests outside the Ministry: "I just wanted to ${f.permit}!"`);
         broadcastHosts({ t: 'fx', kind: 'protest' });
         moodChange(-5);
-      } else {
+      } else if (!whoOk) {
         const r = j.who.find(r => !canStamp(p, [r]));
         addNews('scandal', `PAPERWORK SCANDAL: ${p.name} stamped a ${TAGS[r.when[0].v]} permit ${r.neg ? 'WHILE wearing' : 'WITHOUT'} ${TRAITS[r.trait].n}!`);
+        broadcastHosts({ t: 'fx', kind: 'scandal' });
+        moodChange(-4);
+      } else {
+        addNews('scandal', `PAPERWORK SCANDAL: ${p.name} stamped ${cname}'s form without the ${SCANNERS[skipped.tool].e} ${SCANNERS[skipped.tool].n}!`);
         broadcastHosts({ t: 'fx', kind: 'scandal' });
         moodChange(-4);
       }
@@ -284,6 +342,14 @@ function createRoom(code, ip) {
     players.get(pid).passes++;
     send(t.ws, { t: 'fx', kind: 'newform', from: nm(pid) });
     broadcastHosts({ t: 'fx', kind: 'pass', from: pid, to });
+    sync();
+  }
+  function scan(pid, fid, tool) {
+    const f = forms.get(fid);
+    if (g.phase !== 'day' || !f || f.holder !== pid || !SCANNERS[tool] || f.scans[tool]) return;
+    f.scans[tool] = true;
+    players.get(pid).scans++;
+    broadcastHosts({ t: 'fx', kind: 'scan', pid, tool, caught: (tool === 'uv' && f.mark === 'none') || (tool === 'xray' && contraband.includes(f.bag)) || (tool === 'id' && (f.impostor || f.idExp < g.day)) });
     sync();
   }
   function shred(pid, fid) {
@@ -366,6 +432,7 @@ function createRoom(code, ip) {
     best('walkouts', 2, '🐌 Slowpoke of the Week', v => `${v} citizens gave up waiting`);
     best('bribes', 1, '🤑 Most Crooked', v => `$${v} in bribes`);
     best('vips', 1, '⭐ VIP Whisperer', v => `served ${v} VIP${v > 1 ? 's' : ''}`);
+    best('scans', 8, '🔬 Forensic Department', v => `ran ${v} scans`);
     best('pranked', 2, '🪳 Office Punching Bag', v => `got pranked ${v} times`);
     clerks.forEach(p => { const tot = p.correct + p.wrong; if (tot >= 6 && p.wrong === 0) (out[p.id] = out[p.id] || []).push({ title: '😇 Flawless Bureaucrat', desc: 'never made a mistake' }); });
     return out;
@@ -376,7 +443,7 @@ function createRoom(code, ip) {
     order = shuffle([...players.values()].filter(p => p.ws).map(p => p.id));
     const tr = shuffle(traitKeys);
     order.forEach((id, i) => {
-      Object.assign(players.get(id), { money: 0, traits: [tr[i % tr.length]], shreds: 0, bribes: 0, bribeCount: 0, correct: 0, wrong: 0, worst: null, ready: false, vote: null, peeks: [], streak: 0, bestStreak: 0, passes: 0, disasters: 0, walkouts: 0, vips: 0, megaphones: 0, pranks: 0, tossDay: 0, pranked: 0 });
+      Object.assign(players.get(id), { money: 0, traits: [tr[i % tr.length]], shreds: 0, bribes: 0, bribeCount: 0, correct: 0, wrong: 0, worst: null, ready: false, vote: null, peeks: [], streak: 0, bestStreak: 0, passes: 0, disasters: 0, walkouts: 0, vips: 0, megaphones: 0, pranks: 0, tossDay: 0, pranked: 0, scans: 0, turbo: false });
     });
     rules = []; forms.clear(); news = [];
     city = { mood: 70, protest: 0, lots: Array.from({ length: 18 }, () => ({ e: pick(BUILDINGS), fire: false })) };
@@ -501,12 +568,19 @@ function createRoom(code, ip) {
     const p = players.get(pid);
     v.me = pid; v.inGame = order.includes(pid);
     if (v.inGame) {
-      Object.assign(v, { money: p.money, shreds: p.shreds, traits: p.traits, ready: p.ready, vote: p.vote, peeks: p.peeks, prices: PRICES, megaphones: p.megaphones, pranks: p.pranks, tossed: p.tossDay === g.day });
+      v.today = dayName(g.day);
+      Object.assign(v, { turbo: p.turbo, money: p.money, shreds: p.shreds, traits: p.traits, ready: p.ready, vote: p.vote, peeks: p.peeks, prices: PRICES, megaphones: p.megaphones, pranks: p.pranks, tossed: p.tossDay === g.day });
       v.decree = rules.filter(r => r.temp).map(r => r.text);
       v.rules = rules.filter(r => r.owner === pid).map(r => ({ id: r.id, kind: r.kind, text: r.text, isNew: r.isNew }));
       v.desk = [...forms.values()].filter(f => f.holder === pid).sort((a, b) => a.born - b.born).map(f => ({
         ...formSummary(f), no: f.no, name: f.name, type: f.type, permit: f.permit, tags: f.tags.map(t => TAGS[t]),
         ink: f.ink, signed: f.signed, fee: f.fee, mood: f.mood, atts: f.atts, bribe: f.bribe || 0, quote: f.quote,
+        scan: {
+          uv: f.scans.uv ? MARKS[f.mark] : null,
+          xray: f.scans.xray ? BAG[f.bag] : null,
+          id: f.scans.id ? { name: f.idName, exp: dayName(f.idExp) } : null,
+          temp: f.scans.temp ? f.temp.toFixed(1) : null,
+        },
       }));
     }
     return v;
@@ -536,6 +610,7 @@ function createRoom(code, ip) {
       case 'stamp': return stamp(pid, +m.fid, m.v);
       case 'pass': return pass(pid, +m.fid, String(m.to));
       case 'shred': return shred(pid, +m.fid);
+      case 'scan': return scan(pid, +m.fid, String(m.tool));
       case 'ready':
         if (!['brief', 'news'].includes(g.phase)) return;
         p.ready = true;
@@ -553,6 +628,7 @@ function createRoom(code, ip) {
           send(p.ws, { t: 'toast', text: `🔍 Peeked at ${nm(r.owner)}'s rulebook!` });
         } else if (m.item === 'shred') p.shreds++;
         else if (m.item === 'prank') p.pranks++;
+        else if (m.item === 'turbo') { if (p.turbo) return; p.turbo = true; }
         p.money -= price;
         return sync();
       }
@@ -592,7 +668,7 @@ function createRoom(code, ip) {
   // ---------- connections ----------
   function attach(ws, role) {
     lastActive = Date.now();
-    if (role === 'play') return send(ws, { t: 'hello', taken: [...players.values()].map(p => p.avatar), traits: TRAITS });
+    if (role === 'play') return send(ws, { t: 'hello', taken: [...players.values()].map(p => p.avatar), traits: TRAITS, scanners: SCANNERS });
     if (hosts.size >= MAX_SCREENS) { send(ws, { t: 'busy' }); return ws.close(); }
     hosts.add(ws);
     if (role === 'mirror') mirrors.add(ws);

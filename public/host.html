@@ -389,6 +389,7 @@ function connect() {
       else if (m.kind === 'stamp') react(m);
       else if (m.kind === 'megaphone') megaphone(m);
       else if (m.kind === 'prank') { SFX.prank(); const a = P(m.pid), b = P(m.to); bubbleAt(m.to, `${{ bugs: '🪳🪳🪳', bees: '🐝🐝🐝', balloons: '🎈🎈🎈' }[m.prank]} from ${a.avatar} ${esc(a.name)}!`, true); }
+      else if (m.kind === 'scan') { const e = { uv: '🔦', xray: '🩻', id: '🪪', temp: '🌡️' }[m.tool]; m.caught ? (SFX.scandal(), bubbleAt(m.pid, `${e} 🚨 SOMETHING FISHY!`, true)) : bubbleAt(m.pid, `${e} scanning…`); }
       else if (m.kind === 'toss') { SFX.good(); bubbleAt(m.pid, '🗑️ 3/3 baskets! Nothing but net!'); }
       else if (m.kind === 'event') { SFX.event(); banner(`${esc(m.title)}<br><span style="font-size:.55em">${esc(m.text)}</span>`, 'event', 3500); }
       else SFX[m.kind]?.();
@@ -480,6 +481,7 @@ function overlay(s) {
           <li>Every clerk has <b>different secret rules</b>. Nobody knows them all, so <b>shout them out!</b></li>
           <li>⭐ <b>ALWAYS APPROVE</b> rules beat ❌ DENY rules. If no rule says deny, approve it.</li>
           <li>🎩 Some rules say <b>who</b> may stamp. Check what everyone's wearing!</li>
+          <li>🔬 Forms hide secrets. Use the <b>🔦 UV lamp, 🩻 X-ray, 🪪 ID check and 🌡️ thermometer</b> to catch forgeries, smugglers and impostors.</li>
           <li>Correct stamp <b>+$10</b> · wrong stamp <b>−$5</b> and the city suffers. Don't let citizens wait too long!</li>
           <li>💰 Shady citizens may offer you bribes… just don't get caught.</li></ul>`
         : `<p>Forms will come faster today. ${s.day >= 3 ? '📢 Watch out for surprise memos mid-shift!' : ''}</p>`}

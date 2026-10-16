@@ -19,6 +19,20 @@ const ATTS = ['Form 7B', 'Form 12-C', 'Proof of Existence', "Mom's Permission Sl
 
 const INKS = { pen: '🖊️ pen', crayon: '🖍️ crayon', glitter: '✨ glitter pen' };
 
+// Hidden on the form until a clerk scans it.
+const SCANNERS = {
+  uv: { e: '🔦', n: 'UV LAMP' },
+  xray: { e: '🩻', n: 'X-RAY' },
+  id: { e: '🪪', n: 'ID CHECK' },
+  temp: { e: '🌡️', n: 'THERMOMETER' },
+};
+const MARKS = { crown: '👑 CROWN', unicorn: '🦄 UNICORN', fish: '🐟 FISH', none: '❌ NONE' };
+const BAG = {
+  nothing: '👜 nothing weird', dynamite: '🧨 dynamite', snake: '🐍 a live snake', cheese: '🧀 illegal cheese',
+  goose: '🪿 an angry goose', diamond: '💎 a stolen diamond', teddy: '🧸 a teddy bear', bone: '🦴 a suspicious bone', eggs: '🥚 47 eggs',
+};
+const WEEKDAYS = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'];
+
 const NAMES = ['Gerald', 'Brenda', 'Sir Reginald', 'Doug', 'Mildred', 'Chad', 'Gloria', 'Barnaby', 'Trish',
   'Kevin', 'Dolores', 'Fitzgerald', 'Pam', 'Gus', 'Esmeralda', 'Todd', 'Bertha', 'Rex', 'Linda', 'Moe',
   'Wanda', 'Hank', 'Petunia', 'Clive', 'Agnes', 'Steve'];
@@ -75,4 +89,4 @@ const QUOTES = {
   calm: ['*sips tea calmly*', 'No rush. Except hurry.', "I've meditated about this permit."],
 };
 
-module.exports = { TAGS, TYPES, TRAITS, ATTS, INKS, NAMES, PERMITS, QUOTES };
+module.exports = { TAGS, TYPES, TRAITS, ATTS, INKS, NAMES, PERMITS, QUOTES, SCANNERS, MARKS, BAG, WEEKDAYS };

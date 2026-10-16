@@ -43,6 +43,21 @@ input:focus{border-color:var(--gold)}
 @keyframes shake{25%{transform:translateX(-8px)}75%{transform:translateX(8px)}}
 .shake{animation:shake .3s}
 
+/* scanners */
+.scanbox{margin-top:10px;border-top:2px dashed rgba(43,33,24,.35);padding-top:6px}
+.scanrow{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:4px}
+.scanrow button{background:#2b2118;color:var(--paper);border-radius:8px;padding:8px 4px;font-family:Fredoka;font-weight:600;font-size:14px;box-shadow:0 3px 0 rgba(0,0,0,.35)}
+.scanrow button:active{transform:translateY(2px);box-shadow:none}
+.readout{background:#e3f4ee;border:2px solid #29a19c;border-radius:8px;padding:5px 7px;font-size:13px;line-height:1.25;animation:pop .25s ease-out}
+.readout b{font-size:14px}
+.readout.alarm{background:#fde2e2;border-color:var(--red)}
+@keyframes pop{from{transform:scale(.85);opacity:0}}
+.beam{position:absolute;inset:0;border-radius:6px;pointer-events:none;overflow:hidden;z-index:5}
+.beam::before{content:'';position:absolute;left:0;right:0;height:38px;top:-40px;background:linear-gradient(transparent,var(--bc),transparent);animation:sweep var(--bd) linear}
+.beam::after{content:attr(data-t);position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:'Alfa Slab One';font-size:24px;color:var(--bc);text-shadow:0 2px 0 rgba(0,0,0,.4);background:var(--bt)}
+.beam.uv{--bc:#b77bff;--bt:rgba(80,20,160,.28)}.beam.xray{--bc:#7ff3ff;--bt:rgba(0,30,60,.55)}.beam.id{--bc:#ffd36b;--bt:rgba(60,40,0,.2)}.beam.temp{--bc:#ff6b6b;--bt:rgba(120,0,0,.15)}
+@keyframes sweep{to{top:100%}}
+
 /* the form */
 .paper{background:var(--paper);color:var(--ink);border-radius:6px;padding:14px 14px 12px;box-shadow:0 6px 0 rgba(0,0,0,.3);position:relative;font-family:'Special Elite',monospace;
   background-image:repeating-linear-gradient(0deg,transparent 0 23px,rgba(41,161,156,.12) 23px 24px);animation:slide .3s ease-out}
@@ -119,7 +134,7 @@ input:focus{border-color:var(--gold)}
 .tabs button.on{background:var(--paper);color:var(--ink)}
 .tabs .badge{position:absolute;top:-6px;right:-4px;background:var(--red);color:#fff;border-radius:10px;padding:0 7px;font-size:13px}
 .rule{background:var(--paper);color:var(--ink);border-radius:8px;padding:12px 12px 12px 14px;font-family:'Special Elite',monospace;font-size:16px;line-height:1.3;border-left:8px solid var(--k);position:relative}
-.rule.deny{--k:var(--red)}.rule.allow{--k:var(--gold)}.rule.who{--k:#3d7dca}
+.rule.deny{--k:var(--red)}.rule.allow{--k:var(--gold)}.rule.who{--k:#3d7dca}.rule.scan{--k:#9b5de5}
 .rule .k{font-family:'Alfa Slab One';font-size:12px;letter-spacing:.06em;display:block;margin-bottom:3px;color:var(--k)}
 .rule.new{animation:glow 1.2s ease-in-out 3}
 .rule.new::after{content:'NEW';position:absolute;top:-8px;right:8px;background:var(--red);color:#fff;font-family:'Alfa Slab One';font-size:11px;padding:1px 6px;border-radius:5px}
@@ -166,7 +181,8 @@ const TYPE_E = { wizard: '🧙', raccoon: '🦝', ghost: '👻', robot: '🤖', 
 const MOOD = { calm: '😐 calm', angry: '😠 ANGRY', crying: '😭 CRYING' };
 const FEE = { paid: '💵 paid', unpaid: '<span class="bad">🚫 UNPAID</span>', buttons: '🔘 paid in buttons' };
 const INK = { pen: '🖊️ pen', crayon: '🖍️ crayon', glitter: '✨ glitter pen' };
-const KIND = { deny: '❌ DENY RULE', allow: '⭐ ALWAYS APPROVE · BEATS DENY', who: '🎩 WHO MAY STAMP' };
+const KIND = { deny: '❌ DENY RULE', allow: '⭐ ALWAYS APPROVE · BEATS DENY', who: '🎩 WHO MAY STAMP', scan: '🔬 MUST SCAN FIRST' };
+const SCAN = { uv: { e: '🔦', n: 'UV LAMP' }, xray: { e: '🩻', n: 'X-RAY' }, id: { e: '🪪', n: 'ID CHECK' }, temp: { e: '🌡️', n: 'THERMOMETER' } };
 const store = { get(k) { try { return localStorage.getItem(k); } catch { return null; } }, set(k, v) { try { localStorage.setItem(k, v); } catch {} } };
 let myId = store.get('min_id');
 if (!myId) { myId = Math.random().toString(36).slice(2) + Date.now().toString(36); store.set('min_id', myId); }
@@ -208,7 +224,7 @@ function connect() {
   ws.onopen = () => { $('#off').style.display = 'none'; if (me.name) send({ t: 'join', id: myId, name: me.name, avatar: me.avatar }); };
   ws.onmessage = e => {
     const m = JSON.parse(e.data);
-    if (m.t === 'hello') { taken = m.taken || []; TRAITS = m.traits; if (!me.name) showJoin(); }
+    if (m.t === 'hello') { taken = m.taken || []; TRAITS = m.traits; if (m.scanners) Object.assign(SCAN, m.scanners); if (!me.name) showJoin(); }
     else if (m.t === 'state') {
       const prevPhase = S?.phase;
       S = m.s; recvAt = Date.now();
@@ -276,8 +292,21 @@ function formHTML(f) {
       <div><div class="lbl">ATTACHED</div>${f.atts.length ? f.atts.map(a => `📎 ${esc(a)}`).join('<br>') : '<i>— nothing —</i>'}</div>
       <div><div class="lbl">FEE</div>${FEE[f.fee]}<div class="lbl">SIGNED</div>${f.signed ? '✍️ yes' : '<span class="bad">✖️ NOT SIGNED</span>'}<div class="lbl">INK</div>${INK[f.ink]}</div>
     </div>
+    ${scanHTML(f)}
     ${f.bribe ? `<div class="bribe">💰 <i>Psst…</i> approve this and there's <b>$${f.bribe}</b> in it for you. Nobody has to know. 🤫</div>` : ''}
   </div>`;
+}
+function scanHTML(f) {
+  const r = f.scan || {}, out = [];
+  const read = (k, html, alarm) => `<div class="readout ${alarm ? 'alarm' : ''}">${SCAN[k].e} ${html}</div>`;
+  for (const k of Object.keys(SCAN)) {
+    if (r[k] == null) { out.push(`<button data-scan="${k}">${SCAN[k].e} ${SCAN[k].n}</button>`); continue; }
+    if (k === 'uv') out.push(read(k, `Watermark:<br><b>${esc(r.uv)}</b>`, r.uv.includes('NONE')));
+    if (k === 'xray') out.push(read(k, `In the bag:<br><b>${esc(r.xray)}</b>`));
+    if (k === 'id') out.push(read(k, `ID name: <b>${esc(r.id.name)}</b><br>Expires: <b>${esc(r.id.exp)}</b>`));
+    if (k === 'temp') out.push(read(k, `Body temp:<br><b>${esc(r.temp)}°</b>`));
+  }
+  return `<div class="scanbox"><div class="lbl" style="margin:0">🔬 INSPECTION STATION · TODAY IS ${esc(S?.today || '')}</div><div class="scanrow">${out.join('')}</div></div>`;
 }
 function ruleHTML(r, extra = '', mega = false) {
   return `<div class="rule ${r.kind} ${r.isNew ? 'new' : ''} ${extra}"><span class="k">${KIND[r.kind]}</span>${esc(r.text)}${mega ? `<br><button class="megabtn" data-mega="${r.id}">📢 Shout it on the TV</button>` : ''}</div>`;
@@ -293,7 +322,7 @@ function rulesView(s) {
     ${canMega(s) ? '<p style="font-size:14px;color:var(--gold)">📢 You have 1 megaphone today: blast a rule onto the TV for everyone!</p>' : ''}
     ${s.rules.length ? s.rules.map(r => ruleHTML(r, '', canMega(s))).join('') : '<p>No rules yet.</p>'}
     ${peeks.length ? `<div class="sec">🔍 PEEKED RULES</div>${peeks.map(r => ruleHTML({ ...r, text: `${r.text} (from ${r.owner})` }, 'peek')).join('')}` : ''}
-    <p style="font-size:14px;opacity:.75">⭐ ALWAYS APPROVE beats ❌ DENY. No rule says deny? Approve it.<br>Only YOU can see these. Shout them out loud!</p>`;
+    <p style="font-size:14px;opacity:.75">⭐ ALWAYS APPROVE beats ❌ DENY. No rule says deny? Approve it.<br>🔬 Hidden stuff (watermark, bag, ID, temperature) only shows up when you scan. Rules still count even if you didn't look!<br>Only YOU can see these. Shout them out loud!</p>`;
 }
 function tabsHTML(s) {
   if (tab === 'rules') s.rules.forEach(r => seenRules.add(r.id));
@@ -370,7 +399,7 @@ function render() {
 function renderDesk(s) {
   const main = $('#main'), f = s.desk[0];
   const opp = s.event?.kind === 'opposite' && (s.event.left - (Date.now() - recvAt)) > 0;
-  const key = 'desk' + (opp ? 'O' : '') + (f ? f.id : 'none') + '|' + s.desk.length + '|' + s.rules.length + '|' + s.shreds + '|' + s.pranks + '|' + s.megaphones + (s.decree || []).join() + (pranking ? 'P' : '') + '|' + s.players.map(p => p.online ? 1 : 0).join('');
+  const key = 'desk' + (opp ? 'O' : '') + (f ? f.id + ':' + Object.values(f.scan).filter(v => v != null).length : 'none') + '|' + s.desk.length + '|' + s.rules.length + '|' + s.shreds + '|' + s.pranks + '|' + s.megaphones + (s.decree || []).join() + (pranking ? 'P' : '') + '|' + s.players.map(p => p.online ? 1 : 0).join('');
   if (key === lastKey || busy) return;
   lastKey = key;
   if (!f) {
@@ -403,6 +432,13 @@ function renderDesk(s) {
     setTimeout(() => { send({ t: 'pass', fid: f.id, to: b.dataset.to }); busy = false; lastKey = ''; }, 300);
   });
   $('#shred')?.addEventListener('click', () => { send({ t: 'shred', fid: f.id }); });
+  main.querySelectorAll('[data-scan]').forEach(b => b.onclick = () => {
+    if (busy) return; busy = true;
+    const tool = b.dataset.scan, ms = s.turbo ? 300 : 1100;
+    $('#paper').insertAdjacentHTML('beforeend', `<div class="beam ${tool}" style="--bd:${ms}ms" data-t="${SCAN[tool].e} SCANNING…"></div>`);
+    buzz([15, 40, 15, 40, 15]);
+    setTimeout(() => { send({ t: 'scan', fid: f.id, tool }); busy = false; lastKey = ''; render(); }, ms);
+  });
   bindPrank(s);
 }
 
@@ -412,9 +448,10 @@ function renderShop(s) {
     ...Object.entries(TRAITS).map(([k, t]) => ({ k, e: t.e, n: t.n.replace(/^an? /, ''), d: 'Wear it: unlocks stamping rules that need it', dis: owned(k), label: owned(k) ? 'Wearing' : `$${s.prices[k]}` })),
     { k: 'peek', e: '🔍', n: 'Peek', d: "Secretly read one of another clerk's rules", label: `$${s.prices.peek}` },
     { k: 'shred', e: '🗑️', n: 'Shredder', d: 'Destroy one nasty form, no penalty', label: `$${s.prices.shred}` },
+    { k: 'turbo', e: '⚡', n: 'Turbo Scanner', d: 'All your scans run almost instantly', dis: s.turbo, label: s.turbo ? 'Owned' : `$${s.prices.turbo}` },
     { k: 'prank', e: '🪳', n: 'Prank', d: "Unleash bugs on a coworker's phone tomorrow", label: `$${s.prices.prank}${s.pranks ? ` (own ${s.pranks})` : ''}` },
   ];
-  const key = 'shop' + s.money + s.ready + (s.traits || []).join() + s.shreds + (s.peeks || []).length + s.pranks + s.tossed;
+  const key = 'shop' + s.money + s.ready + s.turbo + (s.traits || []).join() + s.shreds + (s.peeks || []).length + s.pranks + s.tossed;
   if (key === lastKey || tossState) return;
   lastKey = key;
   $('#main').innerHTML = `<h2 style="text-align:center">☕ BREAK ROOM</h2>
